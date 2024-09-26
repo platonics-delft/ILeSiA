@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>video_embedding</name>
+  <version>3.8.0</version>
+  <description>The video_embedding package</description>
+  <maintainer email="g.franzese@tudelft.nl">franzesegiovanni</maintainer>
+  <license>TODO</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>pynput</depend>
+
+</package>

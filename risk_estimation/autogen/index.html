@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- 
+        Run in folder: python3 -m http.server
+        Load: localhost:8000 on your browser
+        Bug: When new video is loaded, SVG is not deleted
+    -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video with Graph Overlay</title>
+    <link href="https://vjs.zencdn.net/7.11.4/video-js.css" rel="stylesheet" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <style>
+        #video-container {
+            position: relative;
+            width: 640px; /* Set this to the width of your video */
+        }
+        #risk-graph-1 {
+            position: relative;
+            bottom: 0px;
+            left: 10px;
+            width: 600px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.5); /* Semi-transparent white background */
+        }
+        #risk-graph-2 {
+            position: relative;
+            bottom: 0px;
+            left: 10px;
+            width: 600px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.5); /* Semi-transparent white background */
+        }
+        #risk-graph-3 {
+            position: relative;
+            bottom: 0px;
+            left: 10px;
+            width: 600px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.5); /* Semi-transparent white background */
+        }
+        #risk-graph-4 {
+            position: relative;
+            bottom: 0px;
+            left: 10px;
+            width: 600px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.5); /* Semi-transparent white background */
+        }
+        #risk-graph-5 {
+            position: relative;
+            bottom: 0px;
+            left: 10px;
+            width: 600px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.5); /* Semi-transparent white background */
+        }
+        #risk-graph-6 {
+            position: relative;
+            bottom: 0px;
+            left: 10px;
+            width: 600px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.5); /* Semi-transparent white background */
+        }
+
+        #risk-graph-B1 {
+            position: relative;
+            bottom: 0px;
+            left: 10px;
+            width: 600px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.5); /* Semi-transparent white background */
+        }
+        #risk-graph-B2 {
+            position: relative;
+            bottom: 0px;
+            left: 10px;
+            width: 600px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.5); /* Semi-transparent white background */
+        }
+        #risk-graph-B3 {
+            position: relative;
+            bottom: 0px;
+            left: 10px;
+            width: 600px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.5); /* Semi-transparent white background */
+        }
+        #risk-graph-B4 {
+            position: relative;
+            bottom: 0px;
+            left: 10px;
+            width: 600px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.5); /* Semi-transparent white background */
+        }
+        #risk-graph-B5 {
+            position: relative;
+            bottom: 0px;
+            left: 10px;
+            width: 600px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.5); /* Semi-transparent white background */
+        }
+        #risk-graph-B6 {
+            position: relative;
+            bottom: 0px;
+            left: 10px;
+            width: 600px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.5); /* Semi-transparent white background */
+        }
+
+    </style>
+</head>
+<body>
+    <div class="w3-row">
+        <div class="w3-sand w3-container w3-col" style="width:850px">
+          <h2>Pick video</h2>
+          <select id="videoSelector" size=40>
+            <option value="peg_door">choose video</option>
+        </select>
+        </div>
+        <div class="w3-container w3-col" style="width:450px">
+          <div id="video-container">
+            <video id="videoPlayerId" class="video-js" controls preload="auto" width="400" height="900">
+                <source src="peg_door.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            
+          </div>
+        </div>
+        <div class="w3-container w3-col w3-sand" style="width:400px">
+          <h6 id="risk-graph-1-title">1. Distane Risk Estimator</h6>
+          <div id="risk-graph-1"></div>
+          <h6 id="risk-graph-2-title">2. Linear Regression Risk Estimator</h6>
+          <div id="risk-graph-2"></div>
+          <h6 id="risk-graph-3-title">3. Multi-Layer Perc. Risk Estimator</h6>
+          <div id="risk-graph-3"></div>
+          <h6 id="risk-graph-4-title">4. Gaussian Process Risk Estimator</h6>
+          <div id="risk-graph-4"></div>
+          <h6 id="risk-graph-5-title">5.</h6>
+          <div id="risk-graph-5"></div>
+          <h6 id="risk-graph-6-title">6.</h6>
+          <div id="risk-graph-6"></div>
+          <!--<h2>Legend</h2>
+          <img src="risk_legend.png"/>-->
+        </div>
+        <div class="w3-container w3-col w3-sand" style="width:400px">
+            <h6 id="risk-graph-B1-title">7.</h6>
+            <div id="risk-graph-B1"></div>
+            <h6 id="risk-graph-B2-title">8.</h6>
+            <div id="risk-graph-B2"></div>
+            <h6 id="risk-graph-B3-title">9.</h6>
+            <div id="risk-graph-B3"></div>
+            <h6 id="risk-graph-B4-title">10.</h6>
+            <div id="risk-graph-B4"></div>
+            <h6 id="risk-graph-B5-title">11.</h6>
+            <div id="risk-graph-B5"></div>
+            <h6 id="risk-graph-B6-title">12.</h6>
+            <div id="risk-graph-B6"></div>
+            
+          </div>
+      </div>
+
+
+
+
+
+    <script src="https://vjs.zencdn.net/7.11.4/video.js"></script>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var videoPlayer = videojs('videoPlayerId');
+            var svg1;
+            var svg2;
+            var svg3;
+            var svg4;
+
+            document.getElementById('videoSelector').addEventListener('change', function() {
+                videoPlayer.src({ type: "video/mp4", src: this.value + ".mp4" });
+                videoPlayer.load(); // Load the new video source
+                videoPlayer.play(); // Optionally play the video
+                
+                svg1 = d3.select("#risk-graph-1").select("svg").remove();
+                svg1 = d3.select("#risk-graph-1").append("svg")
+                            .attr("width", 300)
+                            .attr("height", 100);
+                svg2 = d3.select("#risk-graph-2").select("svg").remove();
+                svg2 = d3.select("#risk-graph-2").append("svg")
+                            .attr("width", 300)
+                            .attr("height", 100);
+                svg3 = d3.select("#risk-graph-3").select("svg").remove();
+                svg3 = d3.select("#risk-graph-3").append("svg")
+                            .attr("width", 300)
+                            .attr("height", 100);
+                svg4 = d3.select("#risk-graph-4").select("svg").remove();
+                svg4 = d3.select("#risk-graph-4").append("svg")
+                            .attr("width", 300)
+                            .attr("height", 100);
+                svg5 = d3.select("#risk-graph-5").select("svg").remove();
+                svg5 = d3.select("#risk-graph-5").append("svg")
+                            .attr("width", 300)
+                            .attr("height", 100);
+                svg6 = d3.select("#risk-graph-6").select("svg").remove();
+                svg6 = d3.select("#risk-graph-6").append("svg")
+                            .attr("width", 300)
+                            .attr("height", 100);
+
+
+                svgB1 = d3.select("#risk-graph-B1").select("svg").remove();
+                svgB1 = d3.select("#risk-graph-B1").append("svg")
+                            .attr("width", 300)
+                            .attr("height", 100);
+                svgB2 = d3.select("#risk-graph-B2").select("svg").remove();
+                svgB2 = d3.select("#risk-graph-B2").append("svg")
+                            .attr("width", 300)
+                            .attr("height", 100);
+                svgB3 = d3.select("#risk-graph-B3").select("svg").remove();
+                svgB3 = d3.select("#risk-graph-B3").append("svg")
+                            .attr("width", 300)
+                            .attr("height", 100);
+                svgB4 = d3.select("#risk-graph-B4").select("svg").remove();
+                svgB4 = d3.select("#risk-graph-B4").append("svg")
+                            .attr("width", 300)
+                            .attr("height", 100);
+                svgB5 = d3.select("#risk-graph-B5").select("svg").remove();
+                svgB5 = d3.select("#risk-graph-B5").append("svg")
+                            .attr("width", 300)
+                            .attr("height", 100);
+                svgB6 = d3.select("#risk-graph-B6").select("svg").remove();
+                svgB6 = d3.select("#risk-graph-B6").append("svg")
+                            .attr("width", 300)
+                            .attr("height", 100);
+                
+
+                var modelNames = [];
+                // read available models
+                
+                fetch(this.value + "_result_index_list.csv")
+                .then(response => response.text())
+                .then(data => {
+                    
+                    var indexData = parseCSV(data, false);
+                    indexData.forEach((dataPoint, index) => {
+                        res = dataPoint.Results;
+                        
+                        modelNames.push(res);
+                    });
+                
+                    var riskGraphTitle1 = document.getElementById('risk-graph-1-title');
+                    var riskGraphTitle2 = document.getElementById('risk-graph-2-title');
+                    var riskGraphTitle3 = document.getElementById('risk-graph-3-title');
+                    var riskGraphTitle4 = document.getElementById('risk-graph-4-title');
+                    var riskGraphTitle5 = document.getElementById('risk-graph-5-title');
+                    var riskGraphTitle6 = document.getElementById('risk-graph-6-title');
+
+                    var riskGraphTitleB1 = document.getElementById('risk-graph-B1-title');
+                    var riskGraphTitleB2 = document.getElementById('risk-graph-B2-title');
+                    var riskGraphTitleB3 = document.getElementById('risk-graph-B3-title');
+                    var riskGraphTitleB4 = document.getElementById('risk-graph-B4-title');
+                    var riskGraphTitleB5 = document.getElementById('risk-graph-B5-title');
+                    var riskGraphTitleB6 = document.getElementById('risk-graph-B6-title');
+
+                    riskGraphTitle1.innerHTML = modelNames[0];
+                    riskGraphTitle2.innerHTML = modelNames[1];
+                    riskGraphTitle3.innerHTML = modelNames[2];
+                    riskGraphTitle4.innerHTML = modelNames[3];
+                    riskGraphTitle5.innerHTML = modelNames[4];
+                    riskGraphTitle6.innerHTML = modelNames[5];
+
+                    riskGraphTitleB1.innerHTML = modelNames[6];
+                    riskGraphTitleB2.innerHTML = modelNames[7];
+                    riskGraphTitleB3.innerHTML = modelNames[8];
+                    riskGraphTitleB4.innerHTML = modelNames[9];
+                    riskGraphTitleB5.innerHTML = modelNames[10];
+                    riskGraphTitleB6.innerHTML = modelNames[11];
+                    
+                    fetch(this.value + "_" + modelNames[0] + ".csv")
+                        .then(response => response.text())
+                        .then(data => {
+                            var riskData = parseCSV(data, true);
+                            processData(riskData, videoPlayer, svg1);
+                        });
+                    fetch(this.value + "_" + modelNames[1] + ".csv")
+                        .then(response => response.text())
+                        .then(data => {
+                            var riskData = parseCSV(data, true);
+                            processData(riskData, videoPlayer, svg2);
+                        });
+                    fetch(this.value + "_" + modelNames[2] + ".csv")
+                        .then(response => response.text())
+                        .then(data => {
+                            var riskData = parseCSV(data, true);
+                            processData(riskData, videoPlayer, svg3);
+                        });
+                    fetch(this.value + "_" + modelNames[3] + ".csv")
+                        .then(response => response.text())
+                        .then(data => {
+                            var riskData = parseCSV(data, true);
+                            processData(riskData, videoPlayer, svg4);
+                        });
+                    fetch(this.value + "_" + modelNames[4] + ".csv")
+                        .then(response => response.text())
+                        .then(data => {
+                            var riskData = parseCSV(data, true);
+                            processData(riskData, videoPlayer, svg5);
+                        });
+                    fetch(this.value + "_" + modelNames[5] + ".csv")
+                        .then(response => response.text())
+                        .then(data => {
+                            var riskData = parseCSV(data, true);
+                            processData(riskData, videoPlayer, svg6);
+                        });
+
+
+                    fetch(this.value + "_" + modelNames[6] + ".csv")
+                        .then(response => response.text())
+                        .then(data => {
+                            var riskData = parseCSV(data, true);
+                            processData(riskData, videoPlayer, svgB1);
+                        });
+                    fetch(this.value + "_" + modelNames[7] + ".csv")
+                        .then(response => response.text())
+                        .then(data => {
+                            var riskData = parseCSV(data, true);
+                            processData(riskData, videoPlayer, svgB2);
+                        });
+                    fetch(this.value + "_" + modelNames[8] + ".csv")
+                        .then(response => response.text())
+                        .then(data => {
+                            var riskData = parseCSV(data, true);
+                            processData(riskData, videoPlayer, svgB3);
+                        });
+                    fetch(this.value + "_" + modelNames[9] + ".csv")
+                        .then(response => response.text())
+                        .then(data => {
+                            var riskData = parseCSV(data, true);
+                            processData(riskData, videoPlayer, svgB4);
+                        });
+                    fetch(this.value + "_" + modelNames[10] + ".csv")
+                        .then(response => response.text())
+                        .then(data => {
+                            var riskData = parseCSV(data, true);
+                            processData(riskData, videoPlayer, svgB5);
+                        });
+                    fetch(this.value + "_" + modelNames[11] + ".csv")
+                        .then(response => response.text())
+                        .then(data => {
+                            var riskData = parseCSV(data, true);
+                            processData(riskData, videoPlayer, svgB6);
+                        });
+                });
+            });
+
+            function parseCSV(csv, convertToFloat) {
+                let lines = csv.split("\n");
+                let result = [];
+                let headers = lines[0].split(",").map(header => header.trim());
+
+                for (let i = 1; i < lines.length; i++) {
+                    let obj = {};
+                    let currentline = lines[i].split(",");
+
+                    if (currentline.length === headers.length) {
+                        for (let j = 0; j < headers.length; j++) {
+                            if (convertToFloat == true) {
+                                obj[headers[j]] = parseFloat(currentline[j]);
+                            } else {
+                                obj[headers[j]] = currentline[j];
+                            } 
+                            
+                        }
+                        result.push(obj);
+                    }
+                }
+
+                return result;
+            }
+            
+            fetch("video_list.csv")
+            .then(response => response.text())
+            .then(data => {
+                var videoSelector = document.getElementById('videoSelector');
+                var videoData = parseCSV(data, false);
+                videoData.forEach((dataPoint, index) => {
+                    video = dataPoint.Videos;
+                    
+                    var opt = document.createElement('option');
+                    opt.value = video;
+                    opt.innerHTML = video;
+                    videoSelector.appendChild(opt); 
+                });
+            });
+            
+            function processData(riskData, videoPlayer, svg) {
+                // Define scales
+                var x = d3.scaleLinear().domain([0, d3.max(riskData, d => d.Time)]).range([0, 300]);
+                var y = d3.scaleLinear().domain([0, 1]).range([100, 0]);
+
+
+                // Draw correct intervals as blue backgrounds
+                riskData.forEach((dataPoint, index) => {
+                    if (dataPoint.HasLabel) {
+                        if (dataPoint.Correct) {
+                            // Assume continuous correct segments or handle segment calculations
+                            var nextDataPoint = riskData[index + 1] ? riskData[index + 1] : dataPoint;
+                            var rectWidth = x(nextDataPoint.Time) - x(dataPoint.Time);  // width of the rectangle
+
+                            svg.append("rect")
+                            .attr("x", x(dataPoint.Time))
+                            .attr("y", 0)
+                            .attr("width", rectWidth)
+                            .attr("height", 100)
+                            .attr("fill", "blue")
+                            .attr("opacity", 0.3);  // Semi-transparent
+                        } else {
+                            // Assume continuous correct segments or handle segment calculations
+                            var nextDataPoint = riskData[index + 1] ? riskData[index + 1] : dataPoint;
+                            var rectWidth = x(nextDataPoint.Time) - x(dataPoint.Time);  // width of the rectangle
+
+                            svg.append("rect")
+                            .attr("x", x(dataPoint.Time))
+                            .attr("y", 0)
+                            .attr("width", rectWidth)
+                            .attr("height", 100)
+                            .attr("fill", "red")
+                            .attr("opacity", 0.3);  // Semi-transparent
+                        }
+                    }
+
+                    if (dataPoint.SafeTrue) {
+                        var nextDataPoint2 = riskData[index + 1] ? riskData[index + 1] : dataPoint;
+                        var rectWidth2 = x(nextDataPoint2.Time) - x(dataPoint.Time); 
+                        svg.append("rect")
+                        .attr("x", x(dataPoint.Time))
+                        .attr("y", 90)
+                        .attr("width", rectWidth2)
+                        .attr("height", 10)
+                        .attr("fill", "green")
+                        .attr("opacity", 0.7);  // Semi-transparent
+                    }
+                    if (dataPoint.RiskTrue) {
+                        var nextDataPoint3 = riskData[index + 1] ? riskData[index + 1] : dataPoint;
+                        var rectWidth3 = x(nextDataPoint3.Time) - x(dataPoint.Time); 
+                        svg.append("rect")
+                        .attr("x", x(dataPoint.Time))
+                        .attr("y", 5)
+                        .attr("width", rectWidth3)
+                        .attr("height", 10)
+                        .attr("fill", "red")
+                        .attr("opacity", 0.7);  // Semi-transparent
+                    }
+                });
+
+                // Draw line graph for risk probabilities
+                var line = d3.line()
+                            .x(d => x(d.Time))
+                            .y(d => y(d.Risk));
+
+                svg.append("path")
+                .datum(riskData)
+                .attr("fill", "none")
+                .attr("stroke", "red")
+                .attr("stroke-width", 2)
+                .attr("d", line);
+
+                // Add a vertical line to represent the current video time
+                var currentTimeLine = svg.append("line")
+                                        .attr("x1", 0)
+                                        .attr("x2", 0)
+                                        .attr("y1", 0)
+                                        .attr("y2", 100)
+                                        .attr("stroke", "blue")
+                                        .attr("stroke-width", 2);
+
+                // Update current time line on video timeupdate
+                videoPlayer.on('timeupdate', function() {
+                    var currentTime = videoPlayer.currentTime();
+                    var xPos = x(currentTime);
+                    currentTimeLine.attr("x1", xPos*30).attr("x2", xPos*30);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
