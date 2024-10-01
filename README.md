@@ -1,5 +1,7 @@
 # ILeSiA: Interactive Learning of Situational Awareness from Camera Input
 
+See the project website for the paper, materials, and more: http://imitrob.ciirc.cvut.cz/publications/ilesia/
+
 Teaching robots how to use camera images to detect labeled and novel risks.
 ILoSA is a framework that defines models regarding safety instruments used by robotic execution systems to evaluate safety metrics and potentionally provide ways to recover from risky situations.
 
