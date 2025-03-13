@@ -15,30 +15,30 @@ ILeSiA has shown to be effective detecting different challenging risks, such as 
 
 ## Install 
 
-Install dependencies: 
-`pip install torch gpytorch` - model training
-`pip install opencv-python scikit-video scikit-learn scikit-image` - image & data processing
-`pip install pandas matplotlib seaborn` - plotting & saving
-custom [confusion_matrix_pretty_print](https://github.com/petrvancjr/pretty-print-confusion-matrix) (install: `pip install .` inside downloaded repo)
-`sudo apt-get install python-rospkg` - trajectory root folder search.
+[Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install)
 
 ```Shell
-cd <your_ws> # initialize ROS workspace
+mkdir ~/ilesia_ws/src -p
+cd ~/ilesia_ws/src
 git clone https://github.com/platonics-delft/franka_impedance_controller # needs realtime kernel installed
 git clone https://github.com/franzesegiovanni/franka_buttons # (optional to use franka buttons)
 git clone https://github.com/platonics-delft/video-safety-layer/tree/ilesia
-git clone https://github.com/platonics-delft/franka_risk_aware_learning_from_demonstrations
-git clone https://github.com/platonics-delft/trajectory_data
+git clone https://github.com/platonics-delft/panda-ros-py.git
+git clone https://github.com/platonics-delft/trajectory_data --branch ra_tests
+cd ILeSiA
+conda install -c conda-forge mamba
+mamba env create -f environment.yml # check pytorch package version has cuda (not cpu), e.g., cuda126_mkl_py311_h01662ba_301
+conda activate ilesia
+pip install -e .
+cd ..
+sudo apt install build-essential cmake python3-rospkg
 catkin build
-source <your_ws>/devel/setup.bash
+source ~/ilesia_ws/devel/setup.bash
 ```
-Install as ROS1 noetic package.
 
-If package is not found, install with pip: `cd video_safety_layer; pip install .`
+Do this in every new terminal: `conda activate ilesia; source ~/ilesia_ws/devel/setup.bash`
 
 ## Risk estimation
-
-Or use collection demonstration data for Robothon box Setup by downloading: `cd <your_ws>/src; git clone git@github.com:platonics-delft/trajectory_data.git --branch ra_tests`
 
 ### Train risks interactive usage
 

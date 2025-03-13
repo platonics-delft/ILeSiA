@@ -9,7 +9,7 @@ from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimatio
 from risk_estimation.models.risk_estimation.risk_feature_extractor import VideoObservationsRiskAndSafeLabels, StampedLatentObservationsRiskLabels, LatentObservationsRiskLabels, StampedDistLatentObservationsRiskLabels
 from video_embedding.models.video_embedder import VideoEmbedder
 from video_embedding.utils import all_trial_names, behaviour_trial_names, set_session, visualize_labelled_video
-from pretty_confusion_matrix import pp_matrix_from_data
+from risk_estimation.scripts.pretty_confusion_matrix import pp_matrix_from_data
 import video_embedding
 
 def make_dataset_iteration_number(n, video_names, video_embedder, features):

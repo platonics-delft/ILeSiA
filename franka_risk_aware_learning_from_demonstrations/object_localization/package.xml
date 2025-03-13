@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>object_localization</name>
+  <version>0.0.1</version>
+  <description>The object_localization package</description>
+
+  <maintainer email="gfranzese@tudelft.nl">giovannifranzese</maintainer>
+
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>rospy</build_depend>
+  <build_export_depend>rospy</build_export_depend>
+  <exec_depend>rospy</exec_depend>
+  <depend>dynamic_reconfigure</depend>
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+	
+</package>

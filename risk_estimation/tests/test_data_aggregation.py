@@ -9,7 +9,7 @@ from risk_estimation.models.risk_estimation.risk_feature_extractor import Stampe
 from risk_estimation.models.risk_estimator import MLPRiskEstimator
 import video_embedding
 from video_embedding.models.video_embedder import VideoEmbedder
-from pretty_confusion_matrix import pp_matrix_from_data
+from risk_estimation.scripts.pretty_confusion_matrix import pp_matrix_from_data
 from video_embedding.utils import number_of_saved_trials, set_session
 
 

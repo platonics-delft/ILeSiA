@@ -1,0 +1,25 @@
+name: ilesia
+channels:
+- conda-forge
+- robostack-staging
+- robostack-noetic
+- pytorch
+dependencies:
+- python=3.9
+- numpy
+- ros-noetic-desktop
+- pytorch
+- torchvision
+- gpytorch
+- opencv
+- scikit-video
+- scikit-learn
+- scikit-image
+- pandas
+- matplotlib
+- seaborn
+- spatialmath-python
+- catkin_tools
+- pip: 
+  - fastdtw
+  - tqdm

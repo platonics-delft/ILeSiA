@@ -6,8 +6,8 @@ import pandas as pd
 from risk_estimation.models.risk_estimation.saliency_map_generator import get_saliency_map_for_image
 import numpy as np
 import torch
-from utils import visualize_labelled_video
-from pretty_confusion_matrix import pp_matrix_from_data
+from video_embedding.utils import visualize_labelled_video
+from risk_estimation.scripts.pretty_confusion_matrix import pp_matrix_from_data
 from copy import deepcopy
 import risk_estimation
 from sklearn.metrics import f1_score
@@ -46,12 +46,23 @@ class ResultEvaluator():
 
     def __call__(self, risk_estimator, video_embedder, X_test, Y_test, X_test_images=None, Y_test_images=None):
         Y_test = self.to_cpu(Y_test)
-        Y_pred, _ = risk_estimator.sample(X_test)
-        
-        try:
-            Y_pred_std, _ = risk_estimator.sample_uncertainty(X_test)
-        except AttributeError:
-            Y_pred_std = None
+        if isinstance(risk_estimator, list):
+            n_half = len(X_test) // 2
+            Y_pred1, _ = risk_estimator[0].sample(X_test[:n_half])
+            Y_pred2, _ = risk_estimator[1].sample(X_test[n_half:])
+            Y_pred = np.hstack((Y_pred1, Y_pred2))
+            try:
+                Y_pred_std1, _ = risk_estimator[0].sample_uncertainty(X_test[:n_half])
+                Y_pred_std2, _ = risk_estimator[1].sample_uncertainty(X_test[n_half:])
+                Y_pred_std = np.hstack((Y_pred_std1, Y_pred_std2))
+            except AttributeError:
+                Y_pred_std = None
+        else:
+            Y_pred, _ = risk_estimator.sample(X_test)
+            try:
+                Y_pred_std, _ = risk_estimator.sample_uncertainty(X_test)
+            except AttributeError:
+                Y_pred_std = None
 
         print(f"Results: {self.name}")
         if "accuracy" in self.iwanttosee:

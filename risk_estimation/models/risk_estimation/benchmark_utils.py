@@ -78,8 +78,12 @@ def benchmark_eval_save(
     ):
     path = f"{risk_estimation.path}/autogen/{get_session()}/{skill_name}/"
 
-    e = ResultEvaluator(name=f"{title}_{risk_estimator.encode_params_as_str()}", savepath=path, iwanttosee=["accuracy"])
-    e(risk_estimator, video_embedder, dataset.X, dataset.Y, imgset.X, imgset.Y)
+    if isinstance(risk_estimator, list):
+        e = ResultEvaluator(name=f"{title}_{risk_estimator[0].encode_params_as_str()}_twin", savepath=path, iwanttosee=["accuracy"])
+        e(risk_estimator, video_embedder, dataset.X, dataset.Y, imgset.X, imgset.Y)
+    else:
+        e = ResultEvaluator(name=f"{title}_{risk_estimator.encode_params_as_str()}", savepath=path, iwanttosee=["accuracy"])
+        e(risk_estimator, video_embedder, dataset.X, dataset.Y, imgset.X, imgset.Y)
 
 
 def check_validity(features, approach):

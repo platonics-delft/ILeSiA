@@ -12,7 +12,7 @@ import video_embedding
 from video_embedding.models.video_embedder import VideoEmbedder
 import risk_estimation
 import argparse
-from pretty_confusion_matrix import pp_matrix_from_data
+from risk_estimation.scripts.pretty_confusion_matrix import pp_matrix_from_data
 
 from scipy.spatial.distance import cosine, euclidean
 from video_embedding.utils import all_trial_names

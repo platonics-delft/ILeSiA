@@ -14,7 +14,7 @@ from risk_estimation.models.risk_estimator import sample_and_save_on_video
 from models.recovery_state_finder import GPRecoveryStateFinder
 
 import argparse
-from pretty_confusion_matrix import pp_matrix_from_data
+from risk_estimation.scripts.pretty_confusion_matrix import pp_matrix_from_data
 
 def main(args):
     if args.session != "":

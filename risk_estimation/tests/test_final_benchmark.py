@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 import argparse
 from typing import Iterable, List
 
@@ -112,6 +112,8 @@ def test_final_benchmarks(
     video_train_names = all_trial_names(skill_name)
     video_test_names = all_test_names(skill_name)
 
+    print("video_train_names: ", video_train_names, " video_test_names: ", video_test_names)
+
     dataset_nodrop = RiskEstimationDataset.load_dataset(video_train_names, video_embedder,
         frame_dropping_policy=NoFrameDroppingPolicy, features=features)
 
@@ -140,8 +142,8 @@ def test_final_benchmarks(
     risk_estimator2.save_model()
 
 
-    benchmark_eval_save("Train_dataset", skill_name, train_dataset, train_imgset, video_embedder, risk_estimator)
-    benchmark_eval_save("Test_dataset", skill_name, test_dataset, test_imgset, video_embedder, risk_estimator)
+    benchmark_eval_save("Train_dataset", skill_name, train_dataset, train_imgset, video_embedder, [risk_estimator,risk_estimator2])
+    benchmark_eval_save("Test_dataset", skill_name, test_dataset, test_imgset, video_embedder, [risk_estimator,risk_estimator2])
     
     
     # Additional no drop eval
