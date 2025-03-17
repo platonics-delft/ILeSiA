@@ -47,16 +47,25 @@ class ResultEvaluator():
     def __call__(self, risk_estimator, video_embedder, X_test, Y_test, X_test_images=None, Y_test_images=None):
         Y_test = self.to_cpu(Y_test)
         if isinstance(risk_estimator, list):
-            n_half = len(X_test) // 2
-            Y_pred1, _ = risk_estimator[0].sample(X_test[:n_half])
-            Y_pred2, _ = risk_estimator[1].sample(X_test[n_half:])
-            Y_pred = np.hstack((Y_pred1, Y_pred2))
-            try:
-                Y_pred_std1, _ = risk_estimator[0].sample_uncertainty(X_test[:n_half])
-                Y_pred_std2, _ = risk_estimator[1].sample_uncertainty(X_test[n_half:])
-                Y_pred_std = np.hstack((Y_pred_std1, Y_pred_std2))
-            except AttributeError:
-                Y_pred_std = None
+            assert X_test.shape[1] in [10,14,18,26,34]
+
+            Y_pred = torch.zeros((len(X_test)))
+            Y_pred_std = torch.zeros((len(X_test)))
+            for n,x in enumerate(X_test):
+                if x[-2].item() < 0.5:
+                    y_pred, _ = risk_estimator[0].sample(torch.unsqueeze(x, dim=0))
+                    y_pred_std, _ = risk_estimator[0].sample_uncertainty(torch.unsqueeze(x, dim=0))
+                else:
+                    y_pred, _ = risk_estimator[1].sample(torch.unsqueeze(x, dim=0))
+                    y_pred_std, _ = risk_estimator[1].sample_uncertainty(torch.unsqueeze(x, dim=0))
+                Y_pred[n] = y_pred[0]
+                Y_pred_std[n] = y_pred_std[0]
+            # try:
+            # except AttributeError:
+            #     Y_pred_std = None
+            Y_pred = np.array(Y_pred)
+            Y_pred_std = np.array(Y_pred_std)
+
         else:
             Y_pred, _ = risk_estimator.sample(X_test)
             try:

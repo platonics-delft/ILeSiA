@@ -155,16 +155,16 @@ def test_final_benchmarks(
 
     
     for video_name in video_train_names:
-        sample_and_save_on_video(video_name, video_embedder, risk_estimator, features, 
+        sample_and_save_on_video(video_name, video_embedder, [risk_estimator,risk_estimator2], features, 
                                  DataLoader(train_dataset, batch_size=video_embedder.batch_size), folder="autogen")
         if save_video_flag and not resnet_type_embedding_approach:
-            video_triplets_save(video_name, video_embedder, risk_estimator, features, 
+            video_triplets_save(video_name, video_embedder, [risk_estimator,risk_estimator2], features, 
                                  DataLoader(train_dataset, batch_size=video_embedder.batch_size), folder="autogen")
     for video_name in video_test_names:
-        sample_and_save_on_video(video_name, video_embedder, risk_estimator, features, 
+        sample_and_save_on_video(video_name, video_embedder, [risk_estimator,risk_estimator2], features, 
                                  DataLoader(train_dataset, batch_size=video_embedder.batch_size), folder="autogen")
         if save_video_flag and not resnet_type_embedding_approach:
-            video_triplets_save(video_name, video_embedder, risk_estimator, features, 
+            video_triplets_save(video_name, video_embedder, [risk_estimator,risk_estimator2], features, 
                                  DataLoader(train_dataset, batch_size=video_embedder.batch_size), folder="autogen")
 
 

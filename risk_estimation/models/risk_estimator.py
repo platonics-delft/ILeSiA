@@ -1189,8 +1189,35 @@ def sample_and_save_on_video(video_name: str, video_embedder, risk_estimator, fe
         frame_dropping_policy=NoFrameDroppingPolicy, # All frames are sampled 
         features=LatentObservationsSafeLabels
     )
+
+    if isinstance(risk_estimator, (list,tuple)):
+        assert dataset.X.shape[1] in [10,14,18,26,34]
+
+        pred = torch.zeros((len(dataset.X)))
+        risks = np.zeros((len(dataset.X)))
+        pred_std = torch.zeros((len(dataset.X)))
+        for n,x in enumerate(dataset.X):
+            if x[-2].item() < 0.5:
+                y_pred, risk = risk_estimator[0].sample(torch.unsqueeze(x, dim=0))
+                y_pred_std, _ = risk_estimator[0].sample_uncertainty(torch.unsqueeze(x, dim=0))
+            else:
+                y_pred, risk = risk_estimator[1].sample(torch.unsqueeze(x, dim=0))
+                y_pred_std, _ = risk_estimator[1].sample_uncertainty(torch.unsqueeze(x, dim=0))
+            pred[n] = y_pred[0]
+            risks[n] = risk[0]
+            pred_std[n] = y_pred_std[0]
+        # try:
+        # except AttributeError:
+        #     Y_pred_std = None
+        pred = np.array(pred)
+        risks = np.array(risks)
+        pred_std = np.array(pred_std)
+
+
     
-    pred, risks = risk_estimator.sample(dataset.X.squeeze())
+        
+    else:
+        pred, risks = risk_estimator.sample(dataset.X.squeeze())
     
     correct = (pred == dataset.Y.cpu().numpy().squeeze())
     safe_labels = safe_labels.Y.cpu().numpy().squeeze()
@@ -1207,7 +1234,10 @@ def sample_and_save_on_video(video_name: str, video_embedder, risk_estimator, fe
 
 
     df = pd.DataFrame(np.array([risks, correct, safe_labels, risk_labels, has_label]).T, columns=['Risk', 'Correct', 'SafeTrue', 'RiskTrue', 'HasLabel'])
-    df.to_csv(f"{path}/{video_name}_{risk_estimator.encode_params_as_str()}.csv", index_label='Time')
+    if isinstance(risk_estimator, (list,tuple)):
+        df.to_csv(f"{path}/{video_name}_{risk_estimator[0].encode_params_as_str()}_twin.csv", index_label='Time')
+    else:
+        df.to_csv(f"{path}/{video_name}_{risk_estimator.encode_params_as_str()}.csv", index_label='Time')
     
 
 
