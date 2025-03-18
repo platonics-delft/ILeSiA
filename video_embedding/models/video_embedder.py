@@ -13,7 +13,7 @@ import risk_estimation, video_embedding
 from video_embedding.models.elastic_weight_consolidation import ElasticWeightConsolidation
 from video_embedding.utils import behaviour_trial_names, get_session, load, visualize_labelled_video
 from video_embedding.models.nerual_networks.autoencoder import LargeAutoencoder, Autoencoder, CustomResnetStage1, CustomResnetStage2, CustomResnetStage3, CustomResnetStage4, CustomResnetStage5
-
+from tqdm import tqdm
 import torchvision
 from torchvision import transforms
 from torchvision.transforms.functional import to_pil_image, to_tensor
@@ -147,7 +147,7 @@ class VideoEmbedder(ElasticWeightConsolidation):
     def training_loop(self, num_epochs: int, patience: int):
         
         stopping_logic = EarlyStopping(patience)
-        for epoch in range(num_epochs):
+        for epoch in tqdm(range(num_epochs), desc=f"Epoch [{epoch}/{num_epochs}], Loss: {loss.item()}"):
             for data in self.dataloader:
                 if self.augmentation:
                     input_batch = data.flatten(-1)
@@ -180,11 +180,11 @@ class VideoEmbedder(ElasticWeightConsolidation):
                 print(f"No improvement for {patience} epochs. Stopping training.")
                 break
 
-            if epoch % 5== 0:
-                if self.augmentation:
-                    print('Epoch [{}/{}], Loss: {:.4f}, Valid. Loss: ?'.format(epoch+1, num_epochs, loss.item() )) #, valid_loss_fp))
-                else:
-                    print('Epoch [{}/{}], Loss: {:.4f}, Valid. Loss: {:.4f}'.format(epoch+1, num_epochs, loss.item(), valid_loss_fp))
+            #if epoch % 5== 0:
+            #    if self.augmentation:
+            #        print('Epoch [{}/{}], Loss: {:.4f}, Valid. Loss: ?'.format(epoch+1, num_epochs, loss.item() )) #, valid_loss_fp))
+            #    else:
+            #        print('Epoch [{}/{}], Loss: {:.4f}, Valid. Loss: {:.4f}'.format(epoch+1, num_epochs, loss.item(), valid_loss_fp))
 
 
         if not self.augmentation:
