@@ -20,6 +20,7 @@ dependencies:
 - seaborn
 - spatialmath-python
 - catkin_tools
+- pytest
 - pip: 
   - fastdtw
   - tqdm

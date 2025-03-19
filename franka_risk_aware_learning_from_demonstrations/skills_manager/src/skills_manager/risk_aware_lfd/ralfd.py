@@ -219,7 +219,7 @@ class RALfD(RiskAwarePlayer, RiskAwareFeedback, LfD):
         resized_img_gray=image_process(self.curr_image, self.ds_factor, self.row_crop_pct_top , self.row_crop_pct_bot,self.col_crop_pct_left, self.col_crop_pct_right)
         resized_img_gray.reshape((1, resized_img_gray.shape[0], resized_img_gray.shape[1]))
 
-        last_image_square = cv2.resize(resized_img_gray, (64, 64))
+        last_image_square = cv2.resize(resized_img_gray, (64, 64), interpolation=cv2.INTER_AREA)
         last_image_square = last_image_square[np.newaxis, np.newaxis, :, :] # (x, 1, 64, 64)
 
         frame_number = np.array([self.get_time_phase()]) # (x, 1)

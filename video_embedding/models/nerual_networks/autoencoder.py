@@ -180,7 +180,7 @@ class CustomResnetFuns():
 
     rgb_transform = resnet_transform = torchvision.transforms.Compose([
         torchvision.transforms.Grayscale(num_output_channels=3),
-        torchvision.transforms.Resize(256),
+        torchvision.transforms.Resize(256, interpolation=torchvision.transforms.InterpolationMode.BICUBIC),
         torchvision.transforms.CenterCrop(224),
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize(mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225]),

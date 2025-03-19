@@ -130,6 +130,9 @@ def test_final_benchmarks(
     risk_estimator.save_model()
 
 
+    benchmark_eval_save("Train_dataset", skill_name, train_dataset, train_imgset, video_embedder, [risk_estimator,risk_estimator2])
+    benchmark_eval_save("Test_dataset", skill_name, test_dataset, test_imgset, video_embedder, [risk_estimator,risk_estimator2])
+
     risk = "2"
     framedrop_policy = eval(f"{OnlyLabelledFramesDroppingPolicy().__class__.__name__}Risk{mapping[skill_name]}{risk}")
     train_dataset, train_imgset, test_dataset, test_imgset = RiskEstimationDataset.extended_load(

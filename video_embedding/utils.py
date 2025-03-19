@@ -38,7 +38,7 @@ def load_video(name):
     images_new=np.zeros((len(images),64,64))
 
     for i in range(len(images)):
-        images_new[i]=cv2.resize(images[i], (64, 64))
+        images_new[i]=cv2.resize(images[i], (64, 64), interpolation=cv2.INTER_AREA)
 
     # images_new = images_new[:, np.newaxis, :, :]
 
@@ -47,7 +47,7 @@ def load_video(name):
 def tensor_image_to_cv2(image):
     ''' Returns image ready for imshow '''
     image = image.detach().cpu().numpy().squeeze().astype(np.uint8)
-    image = cv2.resize(image, (64, 64))
+    image = cv2.resize(image, (64, 64), interpolation=cv2.INTER_AREA)
     return image
     
 def visulize_video(img):
@@ -79,7 +79,7 @@ def save_video(path, name, tensor_images, h=64, w=64):
         writer.writeFrame(tensor_images[i].reshape(h, w).astype(np.uint8))
     writer.close()
 
-def visualize_labelled_video(images, labels={}, press_for_next_frame=False, printer=False, h=64, w=64):
+def visualize_labelled_video(images, labels={}, press_for_next_frame=False, printer=False, h=200, w=200):
     '''
     '''
     risk_flag = np.zeros((len(images)))
@@ -140,7 +140,7 @@ def visualize_labelled_video_frame(image, risk_flag, safe_flag=0, novelty_flag=0
         recovery_phase = ""
 
     image = image.squeeze().astype(np.uint8)
-    image = cv2.resize(image, (64, 64))
+    image = cv2.resize(image, (64, 64), interpolation=cv2.INTER_AREA)
 
     cv2.putText(image, risk_label, (0, 12), cv2.FONT_HERSHEY_SIMPLEX,
         0.5, color, 1, 2)
@@ -184,7 +184,7 @@ def visualize_labelled_video_frame_inline(image, risk_flag, safe_flag=0, novelty
     # Assume 'image' is a numpy array loaded in your environment
     # and 'risk_label', 'novelty_label', 'risk_flag', 'safe_flag' are defined
     image = image.squeeze().astype(np.uint8)
-    image = cv2.resize(image, (64, 64))
+    image = cv2.resize(image, (64, 64), interpolation=cv2.INTER_AREA)
 
     # Convert the color from BGR to RGB (matplotlib expects RGB)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)

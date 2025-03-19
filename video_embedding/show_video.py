@@ -18,7 +18,7 @@ def main(args):
     images_new=np.zeros((len(images),64,64))
 
     for i in range(len(images)):
-        images_new[i]=cv2.resize(images[i], (64, 64))
+        images_new[i]=cv2.resize(images[i], (64, 64), interpolation=cv2.INTER_AREA)
 
     # images_new = images_new[:, np.newaxis, :, :]
 

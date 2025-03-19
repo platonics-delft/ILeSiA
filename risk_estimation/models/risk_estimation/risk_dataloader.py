@@ -106,7 +106,7 @@ class RiskEstimationDataset(Dataset):
                 images_reference_new[i] = cv2.resize(images_reference[i], (64, 64))
 
         for i in range(len(images)):
-            img = cv2.resize(images[i], (64, 64))
+            img = cv2.resize(images[i], (64, 64), interpolation=cv2.INTER_AREA)
             # ADD IMAGE CORRECTOR HERE
             if IMAGE_CORRECTOR_ENABLED:
                 img = image_corrector.correct_image(img, images_reference_new[i].astype(np.uint8))

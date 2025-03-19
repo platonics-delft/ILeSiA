@@ -77,7 +77,7 @@ class VideoEmbedder(ElasticWeightConsolidation):
         self.name = name
         self.dataloader = self.load_dataset([name])
 
-    def load_dataset(self, train_names, validation=False):
+    def load_dataset(self, train_names, validation=False, LABELING_AREAS_VID_EMB=False):
         if not validation:
             self.train_names = train_names
 
@@ -92,7 +92,7 @@ class VideoEmbedder(ElasticWeightConsolidation):
             images_new=np.zeros((len(images),64,64))
 
             for i in range(len(images)):
-                images_new[i]=cv2.resize(images[i], (64, 64))
+                images_new[i]=cv2.resize(images[i], (64, 64), interpolation=cv2.INTER_AREA)
 
             try:
                 if self.frame_dropping == True: # Is False by default
@@ -111,6 +111,26 @@ class VideoEmbedder(ElasticWeightConsolidation):
                     self.tensor_images = tensor_images
 
             list_of_tensor_images.append(tensor_images)
+
+        if LABELING_AREAS_VID_EMB:
+            for v in range(30):
+                name = f"peg_pick404_test_{v}"
+
+                data = load(file=name)
+                images= data['img']
+                risk_flag = data['risk_flag']
+                safe_flag = data['safe_flag']
+                images_new=np.zeros((60,64,64))
+
+                for n,i in enumerate(list(range(60,90)) + list(range(480,510))):
+                    images_new[n]=cv2.resize(images[i], (64, 64), interpolation=cv2.INTER_AREA)
+
+                images = images_new[:, np.newaxis, :, :]
+                tensor_images = torch.tensor(images, dtype=torch.float32).cuda()
+
+                list_of_tensor_images.append(tensor_images)
+
+
 
         tensor_dataset_images = torch.cat(list_of_tensor_images)
         # Create a TensorDataset
@@ -147,7 +167,8 @@ class VideoEmbedder(ElasticWeightConsolidation):
     def training_loop(self, num_epochs: int, patience: int):
         
         stopping_logic = EarlyStopping(patience)
-        for epoch in tqdm(range(num_epochs), desc=f"Epoch [{epoch}/{num_epochs}], Loss: {loss.item()}"):
+        pviz = tqdm(range(num_epochs))
+        for epoch in pviz:
             for data in self.dataloader:
                 if self.augmentation:
                     input_batch = data.flatten(-1)
@@ -180,6 +201,7 @@ class VideoEmbedder(ElasticWeightConsolidation):
                 print(f"No improvement for {patience} epochs. Stopping training.")
                 break
 
+            pviz.set_description(desc=f"Epoch [{epoch}/{num_epochs}], Loss: {loss.item()}")
             #if epoch % 5== 0:
             #    if self.augmentation:
             #        print('Epoch [{}/{}], Loss: {:.4f}, Valid. Loss: ?'.format(epoch+1, num_epochs, loss.item() )) #, valid_loss_fp))

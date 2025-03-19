@@ -33,14 +33,14 @@ def plot_camera_images_along_robot_configurations(camera_images, robot_states, n
     for idx in idxs:
         camera_image = camera_images[idx]
         camera_image = cv2.cvtColor(camera_image, cv2.COLOR_GRAY2BGR)
-        camera_image = cv2.resize(camera_image, (single_image_size,single_image_size))
+        camera_image = cv2.resize(camera_image, (single_image_size,single_image_size), interpolation=cv2.INTER_AREA)
 
         panda_config = robot_states[idx]
         pandaimg = get_panda_at_config(q=panda_config)
         # pandaimg = cv2.cvtColor(pandaimg, cv2.COLOR_BGR2GRAY)
         margin = int(single_image_size/4)
         pandaimg = pandaimg[margin:-margin,margin:-margin,:]
-        pandaimg = cv2.resize(pandaimg, (single_image_size, single_image_size))
+        pandaimg = cv2.resize(pandaimg, (single_image_size, single_image_size), interpolation=cv2.INTER_AREA)
 
         robot_with_image_vertical = np.vstack((pandaimg, camera_image))
         concatenated_image = np.hstack((concatenated_image, robot_with_image_vertical))
