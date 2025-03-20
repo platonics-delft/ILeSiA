@@ -117,17 +117,17 @@ def visualize_labelled_video(images, labels={}, press_for_next_frame=False, prin
             break
         
 
-def visualize_labelled_video_frame(image, risk_flag, safe_flag=0, novelty_flag=0, recovery_phase=-1.0, press_for_next_frame=False, printer=False, w=64, h=64):
+def visualize_labelled_video_frame(image, risk_flag, safe_flag=0, novelty_flag=0, recovery_phase=-1.0, press_for_next_frame=False, printer=False, w=64, h=64, risk_val=0.0):
     if risk_flag:
-        risk_label = 'RISK!'
+        risk_label = f'RISK{risk_val:.1f}'
         color=(0,0,255)
     elif safe_flag:
-        risk_label = 'SAFE'
+        risk_label = f'SAFE{risk_val:.1f}'
         color=(255,0,0)
     else:
-        risk_label = 'SAFE'
+        risk_label = f'SAFE{risk_val:.1f}'
         color=(255,0,0)
-        risk_label = ''
+        # risk_label = ''
     
     if novelty_flag:
         novelty_label = 'N'
@@ -153,7 +153,8 @@ def visualize_labelled_video_frame(image, risk_flag, safe_flag=0, novelty_flag=0
     cv2.namedWindow("Image", cv2.WINDOW_NORMAL)
     # cv2.moveWindow("Image",1200,30)
     cv2.resizeWindow("Image", 640, 640)
-    cv2.imshow("Image", image)
+    zoomed_image = cv2.resize(image, (640, 640), interpolation=cv2.INTER_NEAREST)
+    cv2.imshow("Image", zoomed_image)
 
     if printer: print(f"R: {risk_flag}, S: {safe_flag}")
     if press_for_next_frame:

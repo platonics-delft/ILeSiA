@@ -77,7 +77,7 @@ class VideoEmbedder(ElasticWeightConsolidation):
         self.name = name
         self.dataloader = self.load_dataset([name])
 
-    def load_dataset(self, train_names, validation=False, LABELING_AREAS_VID_EMB=False):
+    def load_dataset(self, train_names, validation=False, LABELING_AREAS_VID_EMB=True):
         if not validation:
             self.train_names = train_names
 
@@ -114,15 +114,21 @@ class VideoEmbedder(ElasticWeightConsolidation):
 
         if LABELING_AREAS_VID_EMB:
             for v in range(30):
-                name = f"peg_pick404_test_{v}"
+                # name = f"peg_pick404_test_{v}"
+                # name = f"peg_place404_test_{v}"
+                name = f"peg_door404_test_{v}"
 
                 data = load(file=name)
                 images= data['img']
                 risk_flag = data['risk_flag']
                 safe_flag = data['safe_flag']
-                images_new=np.zeros((60,64,64))
+                # images_new=np.zeros((60,64,64))
+                # images_new=np.zeros((150,64,64))
+                images_new=np.zeros((170,64,64))
 
-                for n,i in enumerate(list(range(60,90)) + list(range(480,510))):
+                # for n,i in enumerate(list(range(60,90)) + list(range(480,510))):
+                # for n,i in enumerate(list(range(60,150)) + list(range(400,460))):
+                for n,i in enumerate(list(range(150,240)) + list(range(630,710))):
                     images_new[n]=cv2.resize(images[i], (64, 64), interpolation=cv2.INTER_AREA)
 
                 images = images_new[:, np.newaxis, :, :]

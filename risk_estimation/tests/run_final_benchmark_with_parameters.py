@@ -82,10 +82,10 @@ for latent_dim in latent_dims:
                     learning_rate = 0.01
                     train_epoch = 6000
                     train_patience = 2000
-                    if latent_dim <= 16:
-                        embedding_approach = "Autoencoder"
-                    else:
-                        embedding_approach = "LargeAutoencoder"
+                    # if latent_dim <= 16:
+                    # embedding_approach = "Autoencoder"
+                    # else:
+                    embedding_approach = "LargeAutoencoder"
                     
                     features = "StampedDistRecErrLatentObservationsRiskLabels"
                     features = "StampedDistLatentObservationsRiskLabels"

@@ -81,7 +81,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--video", nargs="+",
-        default=["peg_door", "peg_door_trial_0", "peg_door_trial_1", "peg_door_trial_2", "peg_door_trial_3", "peg_door_trial_4", "peg_door_trial_5", "peg_door_trial_6"],
+        default=["peg_door404"],
         help="put video name or video names for video embedder to be trained on"
     )
     parser.add_argument(
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--session",
-        default="",
+        default="quantitative_study",
     )
     parser.add_argument(
         "--behaviours", nargs="+",
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--latent_dim",
-        default=16,
+        default=12,
     )
     parser.add_argument("-lr",
         "--learning_rate",

@@ -461,13 +461,22 @@
                 var line = d3.line()
                             .x(d => x(d.Time))
                             .y(d => y(d.Risk));
-
                 svg.append("path")
                 .datum(riskData)
                 .attr("fill", "none")
                 .attr("stroke", "red")
                 .attr("stroke-width", 2)
                 .attr("d", line);
+
+                var line2 = d3.line()
+                            .x(d => x(d.Time))
+                            .y(d => y(d.Std));
+                svg.append("path")
+                .datum(riskData)
+                .attr("fill", "none")
+                .attr("stroke", "green")
+                .attr("stroke-width", 1)
+                .attr("d", line2);
 
                 var threshold = svg.append("line")
                                         .attr("x1", 0)

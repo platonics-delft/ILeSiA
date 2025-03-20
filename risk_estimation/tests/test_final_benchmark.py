@@ -19,7 +19,6 @@ from risk_estimation.models.risk_estimation.risk_feature_extractor import (
     StampedDistRecErrLatentObservationsRiskLabels
 )
 from risk_estimation.models.risk_estimation.benchmark_utils import (
-    get_dataset_and_images_nodrop, 
     benchmark_eval_save,
     check_validity
 )
@@ -127,7 +126,7 @@ def test_final_benchmarks(
     risk_estimator.dataloader_test_for_plot = DataLoader(test_dataset, batch_size=video_embedder.batch_size, shuffle=True)
     risk_estimator.dataloader_nodrop_for_plot = DataLoader(dataset_nodrop, batch_size=video_embedder.batch_size, shuffle=True)
     risk_estimator.training_loop(DataLoader(train_dataset, batch_size=video_embedder.batch_size), early_stop=True)
-    risk_estimator.save_model()
+    risk_estimator.save_model(model_special=risk)
 
 
     benchmark_eval_save("Train_dataset", skill_name, train_dataset, train_imgset, video_embedder, [risk_estimator,risk_estimator2])
@@ -142,7 +141,7 @@ def test_final_benchmarks(
     risk_estimator2.dataloader_test_for_plot = DataLoader(test_dataset, batch_size=video_embedder.batch_size, shuffle=True)
     risk_estimator2.dataloader_nodrop_for_plot = DataLoader(dataset_nodrop, batch_size=video_embedder.batch_size, shuffle=True)
     risk_estimator2.training_loop(DataLoader(train_dataset, batch_size=video_embedder.batch_size), early_stop=True)
-    risk_estimator2.save_model()
+    risk_estimator2.save_model(model_special=risk)
 
 
     benchmark_eval_save("Train_dataset", skill_name, train_dataset, train_imgset, video_embedder, [risk_estimator,risk_estimator2])

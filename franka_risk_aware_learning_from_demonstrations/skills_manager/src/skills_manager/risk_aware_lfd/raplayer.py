@@ -35,8 +35,8 @@ class RiskAwarePlayer(Player):
                 
                 self.traj_rec_step()
                 
-                system_risk_pred = self.sl.get_estimated_risk(self.get_observations())
-                visualize_labelled_video_frame(self.curr_image, risk_flag=system_risk_pred)
+                system_risk_pred, risk_val = self.sl.get_estimated_risk(self.get_observations())
+                visualize_labelled_video_frame(self.curr_image, risk_flag=system_risk_pred, risk_val=risk_val)
                 
                 action, alpha = self.risk_policy.do(self, system_risk_pred, self.risk_flag)
 
@@ -167,26 +167,27 @@ class InteractivePlayer(RiskAwarePlayer):
 
         self.at_target_previously = at_target
 
-    def loop(self, skill_name):
+    def loop(self):
         
-        self.sl = SafetyLayer(skill_name = skill_name)  
-        self.load(file = skill_name)
-
-        replay = False 
+        self.sl = SafetyLayer(skill_name = self.filename, enable_risk_estimator=True)  
         start = self.player_init()
-        
-        # Turn on cv2 camera window
+        self.traj_rec_init()
+
+        retry_insertion_flag = 0
+
         while not rospy.is_shutdown() and not self.end:
             try:
-                o = self.get_observations()
-                x, y = self.sl.feature_extractor.extract(o, self.sl.video_embedder)
-                # sample
-                pred, risk = self.sl.sample(x)
-                print(f"pred: {pred}, risk {risk}")
+
+                if self.player_step(start, retry_insertion_flag) == 'stop':
+                    break
                 
-                next_time_index = self.time_index + np.clip(int(self.target_time_index) - int(self.time_index), -1, 1, dtype=int)
+                self.traj_rec_step()
+
+                system_risk_pred, risk_val = self.sl.get_estimated_risk(self.get_observations())
+                
+                next_time_index = int(self.time_index + np.clip(int(self.target_time_index) - int(self.time_index), -1, 1, dtype=int))
                 at_target = self.time_index == self.target_time_index
-                print(f"Now time index: {self.time_index}, {self.target_time_index}, next_time index: {next_time_index}, action: {at_target}")
+                # print(f"Now time index: {self.time_index}, {self.target_time_index}, next_time index: {next_time_index}, action: {at_target}")
 
                 self.set_stiffness_once(at_target)
 
@@ -198,7 +199,7 @@ class InteractivePlayer(RiskAwarePlayer):
                 self.time_index = next_time_index
 
                 # visualize image
-                visualize_labelled_video_frame(self.curr_image, risk_flag=pred)
+                visualize_labelled_video_frame(self.curr_image, risk_flag=system_risk_pred, risk_val=risk_val)
 
                 
             except rospy.ROSInterruptException:

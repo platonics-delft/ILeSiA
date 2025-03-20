@@ -16,14 +16,13 @@ except ModuleNotFoundError:
 if __name__ == '__main__':
     name_skill = rospy.get_param('/execute_node/name_skill', "peg_door")
     localize_box = rospy.get_param('/execute_node/localize_box', True)
-    session = rospy.get_param("/recording_node/session", "")
+    session = rospy.get_param("/execute_node/session", "")
     set_session(session)
 
     print(f"Executing skill: {name_skill}, session: {session}")
     print("Localize box: ", localize_box)    
-
     lfd = InteractiveRALfD()
-    
+
     position = rospy.get_param("position")
     orientation = rospy.get_param("orientation") 
 
@@ -39,7 +38,8 @@ if __name__ == '__main__':
         active_localizer = rospy.ServiceProxy('active_localizer', Trigger)
         resp = active_localizer()
         lfd.compute_final_transform() 
-    
-    lfd.loop(name_skill)
+
+    lfd.load(name_skill)
+    lfd.loop()
     
 

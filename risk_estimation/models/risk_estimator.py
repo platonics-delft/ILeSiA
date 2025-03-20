@@ -516,15 +516,13 @@ class GPEarlyStoppingAndPlot():
         self.all_acc_alldrops.append(acc_nodrop)
 
         if self.use_test_data_for_stopping:
-            if (acc_test <= sum(self.acc_tests)/len(self.acc_tests) and epoch > self.patience) or \
-                (acc_test > 99 and acc_train > 99) or (acc_train > 99 and acc_test > 96 and self.acc_tests[-2] > acc_test):
+            if (acc_test <= sum(self.acc_tests)/len(self.acc_tests) and epoch > self.patience): #or (acc_test > 99 and acc_train > 99) or (acc_train > 99 and acc_test > 96 and self.acc_tests[-2] > acc_test):
                 print(f"Early stopping on epoch {epoch}, acc_train: {acc_train}")
                 return True
             else:
                 return False
         else:
-            if (acc_validation <= sum(self.all_acc_validations)/len(self.acc_validations) and epoch > self.patience) or \
-                (acc_validation > 99 and acc_train > 99) or (acc_train > 99 and acc_validation > 96 and self.acc_validations[-2] > acc_validation):
+            if (acc_validation <= sum(self.all_acc_validations)/len(self.acc_validations) and epoch > self.patience): # or (acc_validation > 99 and acc_train > 99) or (acc_train > 99 and acc_validation > 96 and self.acc_validations[-2] > acc_validation):
                 print(f"Early stopping on epoch {epoch}, acc_train: {acc_train}")
                 return True
             else:
@@ -1196,15 +1194,17 @@ def sample_and_save_on_video(video_name: str, video_embedder, risk_estimator, fe
         pred = torch.zeros((len(dataset.X)))
         risks = np.zeros((len(dataset.X)))
         pred_std = torch.zeros((len(dataset.X)))
+        risks_std = np.zeros((len(dataset.X)))
         for n,x in enumerate(dataset.X):
             if x[-2].item() < 0.5:
                 y_pred, risk = risk_estimator[0].sample(torch.unsqueeze(x, dim=0))
-                y_pred_std, _ = risk_estimator[0].sample_uncertainty(torch.unsqueeze(x, dim=0))
+                y_pred_std, risk_std = risk_estimator[0].sample_uncertainty(torch.unsqueeze(x, dim=0))
             else:
                 y_pred, risk = risk_estimator[1].sample(torch.unsqueeze(x, dim=0))
-                y_pred_std, _ = risk_estimator[1].sample_uncertainty(torch.unsqueeze(x, dim=0))
+                y_pred_std, risk_std = risk_estimator[1].sample_uncertainty(torch.unsqueeze(x, dim=0))
             pred[n] = y_pred[0]
             risks[n] = risk[0]
+            risks_std[n] = risk_std[0]
             pred_std[n] = y_pred_std[0]
         # try:
         # except AttributeError:
@@ -1212,12 +1212,13 @@ def sample_and_save_on_video(video_name: str, video_embedder, risk_estimator, fe
         pred = np.array(pred)
         risks = np.array(risks)
         pred_std = np.array(pred_std)
-
+        risks_std = np.array(risks_std)
 
     
         
     else:
         pred, risks = risk_estimator.sample(dataset.X.squeeze())
+        y_pred_std, risks_std = risk_estimator.sample_uncertainty(dataset.X.squeeze())
     
     correct = (pred == dataset.Y.cpu().numpy().squeeze())
     safe_labels = safe_labels.Y.cpu().numpy().squeeze()
@@ -1233,7 +1234,7 @@ def sample_and_save_on_video(video_name: str, video_embedder, risk_estimator, fe
         has_label = interp(has_label, len(correct)) # len adjusted to current video
 
 
-    df = pd.DataFrame(np.array([risks, correct, safe_labels, risk_labels, has_label]).T, columns=['Risk', 'Correct', 'SafeTrue', 'RiskTrue', 'HasLabel'])
+    df = pd.DataFrame(np.array([risks, correct, safe_labels, risk_labels, has_label, risks_std]).T, columns=['Risk', 'Correct', 'SafeTrue', 'RiskTrue', 'HasLabel', 'Std'])
     if isinstance(risk_estimator, (list,tuple)):
         df.to_csv(f"{path}/{video_name}_{risk_estimator[0].encode_params_as_str()}_twin.csv", index_label='Time')
     else:

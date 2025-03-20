@@ -15,14 +15,11 @@ from panda_ros.pose_transform_functions import array_quat_2_pose
 if __name__ == '__main__':
     session = rospy.get_param('/execute_node/session')
     set_session(session)
-    # I'm not sure about multiskills execution feature
-    # splitting ',' to get more skills is not good
-    name_skills = rospy.get_param('/execute_node/name_skill')
-    name_skills = name_skills.split(",")
+    name_skill = rospy.get_param('/execute_node/name_skill')
     
     localize_box = rospy.get_param('/execute_node/localize_box')
     risk_policy = rospy.get_param('/execute_node/risk_policy')
-    print("Executing skill: ", name_skills)
+    print("Executing skill: ", name_skill)
     print("Localize box: ", localize_box)
     print("Risk policy: ", risk_policy)
     lfd = RALfD(risk_policy)
@@ -43,17 +40,13 @@ if __name__ == '__main__':
         resp = active_localizer()
         lfd.compute_final_transform() 
 
-    try:
-        for name_skill in name_skills:
-            lfd.load(name_skill)
-            lfd.execute()
+    lfd.load(name_skill)
+    lfd.execute()
 
-    except rospy.ROSInterruptException:
-        pass
 
     # If something is labelled, it is saved
     if sum(lfd.exec_record['risk_flag'].squeeze()) > 0 or sum(lfd.exec_record['safe_flag'].squeeze()) > 0:
-        lfd.save(name_skills, risk_exec_trial=True)
+        lfd.save(name_skill, risk_exec_trial=True)
 
 
 

@@ -31,11 +31,11 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--video",
-        default="look_at_door",
+        default="peg_door404",
     )
     parser.add_argument(
         "--session",
-        default="",
+        default="quantitative_study",
     )
     
     main(parser.parse_args())

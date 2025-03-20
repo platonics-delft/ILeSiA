@@ -335,6 +335,12 @@ class RiskAwareFeedback(Feedback, RiskAwareFrankaButtons):
             self.safe_flag = 0
             self.novelty_flag = 0
             self.recovery_phase = -1.0
+
+        if key == KeyCode.from_char("+"):
+            self.target_time_index += 20
+        if key == KeyCode.from_char("-"):
+            self.target_time_index -= 20
+
         for i in range(10):
             if key == KeyCode.from_char(str(i)):
                 fraction = float(i) / 10
@@ -357,6 +363,11 @@ class RiskAwareFeedback(Feedback, RiskAwareFrankaButtons):
         if key == KeyCode.from_char("p"):
             print("phenomenon (novelty) flag enabled")
             self.novelty_flag = 1
+
+        if key == KeyCode.from_char("+"):
+            self.target_time_index += 20
+        if key == KeyCode.from_char("-"):
+            self.target_time_index -= 20
 
         for i in range(10):
             if key == KeyCode.from_char(str(i)):

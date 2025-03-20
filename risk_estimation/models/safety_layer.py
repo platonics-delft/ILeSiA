@@ -8,7 +8,7 @@ from typing import Iterable
 import video_embedding, risk_estimation
 from risk_estimation.models.risk_estimation.result_evaluator import ResultEvaluator
 from risk_estimation.models.risk_estimation.risk_feature_extractor import (
-    StampedLatentObservationsRiskLabels, LatentObservationsRiskLabels, VideoObservationsRiskAndSafeLabels, VideoObservationsRiskLabels
+    StampedLatentObservationsRiskLabels, LatentObservationsRiskLabels, VideoObservationsRiskAndSafeLabels, VideoObservationsRiskLabels, StampedDistLatentObservationsRiskLabels
 )
 from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
 from risk_estimation.models.risk_estimation.frame_dropping import (
@@ -55,23 +55,20 @@ class SafetyLayer:
     """Deployed model usage - most effective risk model used"""
     def __init__(
         self,
-        skill_name: str = "peg_door404",
-        behaviours: Iterable[str] = None,
+        skill_name: str,
         latent_dim: int = 12,
-        feature_extractor=LatentObservationsRiskLabels,
+        feature_extractor=StampedDistLatentObservationsRiskLabels,
         frame_dropping_policy = OnlyLabelledFramesDroppingPolicy,
         model_not_found_is_ok: bool = False,
-        out_assessment: str = "optimistic",
+        out_assessment: str = "cautious",
         health_check: bool = False,
-        nn_model = None,
-        enable_train: bool = False ,
+        enable_train: bool = False,
         enable_risk_estimator: bool = True,
     ):
         """_summary_
 
         Args:
             skill_name (str, optional): _description_. Defaults to "peg_door".
-            behaviours (Iterable[str], optional): _description_. Defaults to [ "successful", "door", ].
             ingeneralshouldbe (_type_, optional): _description_. Defaults to 16.
             feature_extractor (_type_, optional): _description_.
             frame_dropping_policy (FrameDropper, optional): _description_. Defaults to OnlyLabelledFramesDroppingPolicy.
@@ -79,13 +76,7 @@ class SafetyLayer:
         self.frame_dropping_policy = frame_dropping_policy
         self.feature_extractor = feature_extractor
         self.out_assessment = out_assessment
-
-        if nn_model is None:
-            if latent_dim > 12:
-                nn_model = LargeAutoencoder
-            else:
-                nn_model = Autoencoder
-
+        
         if latent_dim == 0:
             session = get_session()
             if '12' in session:
@@ -99,7 +90,7 @@ class SafetyLayer:
             else:
                 raise Exception("Not found")
 
-        self.video_embedder = RiskyBehavioralVideoEmbedder(name=skill_name, latent_dim=latent_dim, behaviours=behaviours, nn_model=nn_model)
+        self.video_embedder = RiskyBehavioralVideoEmbedder(name=skill_name, latent_dim=latent_dim, nn_model=LargeAutoencoder)
         if not enable_risk_estimator:
             self.video_embedder = None
             return
@@ -161,19 +152,13 @@ class SafetyLayer:
     def sample(self, o):
         return self.risk_estimator.sample(o)
 
-    def update_model_on_behaviours(self, behaviours):
-        raise NotImplementedError
-
     def get_sample_dataloader(self, risk=1):
         ''' Manually specify frame on which to train
         Args:
             FrameDroppingPolicy: OnlyLabelledFramesDroppingPolicyRisk{skill}{1|2}
             
         '''
-        if self.video_embedder.behaviours is None:
-            self.video_names = all_trial_names(self.video_embedder.name, include_repr=True)
-        else:
-            self.video_names = behaviour_trial_names(self.video_embedder.name, behaviours=self.video_embedder.behaviours)
+        self.video_names = all_trial_names(self.video_embedder.name, include_repr=True)
         print(f"training on: {self.video_names}")
 
         self.dataloader, self.test_dataloader = RiskEstimationDataset.load(
@@ -309,23 +294,24 @@ class SafetyLayer:
         self.workersem.acquire()
         self.observations = observations
         self.workersem.release()
-        return self.risk
+        return self.risk, self.risk_vall
 
     def risk_estimator_thread(self):
         while not rospy.is_shutdown():
             self.workersem.acquire()
             observations = deepcopy(self.observations)
             self.workersem.release()
-            risk = self.estimate_risk(observations)    
+            risk, risk_vall = self.estimate_risk(observations)    
             self.workersem.acquire()
             self.risk = risk
+            self.risk_vall = risk_vall
             self.workersem.release()
             time.sleep(0.01)
 
     @check_estimator
     def estimate_risk(self, observations) -> int: # 0 safe, 1 risk
         if observations is None:
-            return 0.0
+            return 0.0, 0.0
         x, _ = self.feature_extractor.extract(observations, self.video_embedder)
         t1 = time.perf_counter()
         alpha = float(observations[4].squeeze())
@@ -335,9 +321,10 @@ class SafetyLayer:
             system_risk_pred, risk = self.risk_estimator2.sample(x)
 
         system_risk_pred = int(np.array(system_risk_pred).squeeze())
+        risk = float(np.array(risk).squeeze())
         print(f"pred: {system_risk_pred}, risk: {risk}, alpha: {alpha}, {time.perf_counter()-t1}")
 
-        return system_risk_pred
+        return system_risk_pred, risk
     
 
     ''' Some convenience addons '''
