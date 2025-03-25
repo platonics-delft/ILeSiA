@@ -4,8 +4,8 @@ from models.risk_estimation.result_evaluator import ResultEvaluator
 import risk_estimation
 from risk_estimation.plot_utils import plot_threshold_labelled
 import video_embedding
-from video_embedding.utils import all_trial_names, behaviour_trial_names, set_session, tensor_image_to_cv2, visualize_labelled_video
-from video_embedding.models.video_embedder import RiskyBehavioralVideoEmbedder, VideoEmbedder
+from video_embedding.utils import all_trial_names, set_session, tensor_image_to_cv2, visualize_labelled_video
+from video_embedding.models.video_embedder import VideoEmbedder
 from risk_estimation.models.risk_estimation.frame_dropping import NoFrameDroppingPolicy, OnlyLabelledPhaseDroppingPolicy
 from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
 from risk_estimation.models.risk_estimation.risk_feature_extractor import LatentObservationsPhaseLabels, StampedVideoObservationsRiskLabels, VideoObservationsRiskAndSafeLabels, VideoObservationsRiskLabels
@@ -20,7 +20,7 @@ def main(args):
     if args.session != "":
         set_session(args.session)
 
-    video_embedder = RiskyBehavioralVideoEmbedder(
+    video_embedder = VideoEmbedder(
         name=args.skill_name,
         latent_dim=args.video_latent_dim,
     )
@@ -67,7 +67,7 @@ def main(args):
     print("Test")
     X_test, Y_test = RiskEstimationDataset.dataloader_to_array(test_dataloader)
     Y_test = Y_test.cpu().numpy().squeeze()
-    Y_pred, _ = recovery_estimator.sample(X_test)
+    Y_pred, _, _ = recovery_estimator.sample(X_test)
     print("Accuracy: ", ((Y_test - Y_pred) < 1).mean())
     clmns = [f"a={i}" for i in range(10)]
     pp_matrix_from_data(Y_test.round(), Y_pred.round(), columns=clmns, name="Test dataset", savepath=None)
@@ -77,7 +77,7 @@ def main(args):
     print("Train")
     X_train, Y_train = RiskEstimationDataset.dataloader_to_array(train_dataloader)
     Y_train = Y_train.cpu().numpy().squeeze()
-    Y_pred, _ = recovery_estimator.sample(X_train)
+    Y_pred, _, _ = recovery_estimator.sample(X_train)
     print("Accuracy: ", ((Y_train - Y_pred) < 1).mean())
     pp_matrix_from_data(Y_test.round(), Y_pred.round(), columns=clmns, name="Train dataset", savepath=None)
 

@@ -4,16 +4,16 @@ import numpy as np
 from fastdtw import fastdtw
 from scipy.spatial.distance import cosine
 
-from risk_estimation.models.risk_estimator import DistanceRiskEstimator, NMDistanceRiskEstimatorDTW
+from risk_estimation.models.risk_estimator import DistanceRiskEstimator
 from video_embedding.utils import set_session
-from video_embedding.models.video_embedder import RiskyBehavioralVideoEmbedder
+from video_embedding.models.video_embedder import VideoEmbedder
 import argparse
 import cv2
 
 
 def main(args):
     set_session(args['session'])
-    video_embedder = RiskyBehavioralVideoEmbedder(name=args['video'], latent_dim=16)
+    video_embedder = VideoEmbedder(name=args['video'], latent_dim=16)
     video_embedder.load(args['video'])
 
     encoded_traj = video_embedder.model.encoder(video_embedder.tensor_images).detach().cpu().numpy()

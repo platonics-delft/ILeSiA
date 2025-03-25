@@ -3,22 +3,18 @@ from risk_estimation.models.safety_layer import SafetyLayer
 from risk_estimation.models.risk_estimation.frame_dropping import NoFrameDroppingPolicy, OnlyLabelledFramesDroppingPolicy
 from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
 from risk_estimation.models.risk_estimation.risk_feature_extractor import LatentObservationsRiskLabels, StampedDistLatentObservationsRiskLabels, StampedLatentObservationsRiskLabels
-from risk_estimation.models.risk_estimator import (
-    DistanceRiskEstimator,
-    NMDistanceRiskEstimatorDTW,
-    MLPRiskEstimator,
-)
+from risk_estimation.models.risk_estimator import *
 import torch
 import video_embedding, risk_estimation
-from video_embedding.models.video_embedder import VideoEmbedder, RiskyBehavioralVideoEmbedder
+from video_embedding.models.video_embedder import VideoEmbedder
 
 from scipy.spatial.distance import cosine, euclidean
 from video_embedding.utils import all_trial_names, set_session
 
 
-def test_main_video_embedder(video = "peg_door", behaviours = []):
+def test_main_video_embedder(video = "peg_door"):
 
-    video_embedder = RiskyBehavioralVideoEmbedder(name=video, latent_dim=16, behaviours=behaviours)
+    video_embedder = VideoEmbedder(name=video, latent_dim=16)
     
     video_embedder.load()
     video_embedder.create_video(epoch=1)
@@ -127,67 +123,6 @@ def test_risk_estimator_cosine_distance_accuracy_test():
     print(f"Accuracy: {acc}")
     assert acc > 60, f"Accuracy on test data should be above 60%, it is {acc}"
 
-def test_risk_estimator_euclidean_distance_dtw():
-    set_session("test_session")
-    # Video embedder encodes skill from video
-    video_embedder = VideoEmbedder(latent_dim=8)
-    video_embedder.load("peg_door")  # load data
-
-    # video_embedder.create_video(path=risk_estimation.path + "/videos/")  # train ae
-    video_embedder.load_model(
-        path=video_embedding.path + "/saved_models/"
-    )  # OR load model
-
-    risk_estimator = NMDistanceRiskEstimatorDTW(
-        "peg_door_trial_0", dist_fun=euclidean, thr=10)
-
-    risk_estimator.load_representation("peg_door_trial_0", video_embedder)
-    # Test on all data
-    test, pred = risk_estimator.test_all_on_video_names(
-        ["peg_door_trial_0", "peg_door_trial_1",  "peg_door_trial_2", "peg_door_trial_3"],
-        video_embedder,
-    )
-    # TODO: Use video_embedder.re.test_dataloader
-
-    acc = 100 * (test == pred).mean()
-    return acc
-
-def test_risk_estimator_euclidean_distance_dtw_accuracy_test():
-    acc = test_risk_estimator_euclidean_distance_dtw()
-    print(f"Accuracy: {acc}")
-    assert acc > 65, f"Accuracy on test data should be above 65%, it is {acc}"
-
-def test_risk_estimator_cosine_distance_dtw():
-    set_session("test_session")
-    # Video embedder encodes skill from video
-    video_embedder = VideoEmbedder(latent_dim=8)
-    video_embedder.load("peg_door")  # load data
-
-    # video_embedder.create_video(path=risk_estimation.path + "/videos/")  # train ae
-    video_embedder.load_model(
-        path=video_embedding.path + "/saved_models/"
-    )  # OR load model
-
-    risk_estimator = NMDistanceRiskEstimatorDTW(
-        "peg_door_trial_0", dist_fun=cosine, thr=1.5)
-
-    risk_estimator.load_representation("peg_door_trial_0", video_embedder)
-    # Test on all data
-    test, pred = risk_estimator.test_all_on_video_names(
-        ["peg_door_trial_0", "peg_door_trial_1",  "peg_door_trial_2", "peg_door_trial_3"],
-        video_embedder,
-    )
-    # TODO: Use video_embedder.re.test_dataloader
-
-    acc = 100 * (test == pred).mean()
-    return acc
-
-def test_risk_estimator_cosine_distance_dtw_accuracy_test():
-    acc = test_risk_estimator_cosine_distance_dtw()
-    print(f"Accuracy: {acc}")
-    assert acc > 60, f"Accuracy on test data should be above 60%, it is {acc}"
-
-
 
 
 
@@ -231,18 +166,4 @@ def test_perfect_door_session():
 
 
 if __name__ == "__main__":
-    pass
-    # test_risk_estimator_mlp()
-    # test_risk_estimator_mlp_accuracy_test()
-    # test_risk_estimator_mlp_accuracy_stamped()
-    # test_risk_estimator_euclidean_distance()
-    # test_risk_estimator_euclidean_distance_accuracy_test()
-    # test_risk_estimator_cosine_distance()
-    # test_risk_estimator_cosine_distance_accuracy_test()
-    # test_risk_estimator_euclidean_distance_dtw()
-    # test_risk_estimator_euclidean_distance_dtw_accuracy_test()
-    # test_risk_estimator_cosine_distance_dtw()
-    # test_risk_estimator_cosine_distance_dtw_accuracy_test()
     test_deplyed_model_usage()
-
-    # test_perfect_door_session()

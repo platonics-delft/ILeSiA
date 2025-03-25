@@ -8,7 +8,7 @@ from risk_estimation.models.risk_estimation.frame_dropping import ProactiveRiskL
 from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
 from risk_estimation.models.risk_estimation.risk_feature_extractor import VideoObservationsRiskAndSafeLabels, StampedLatentObservationsRiskLabels, LatentObservationsRiskLabels, StampedDistLatentObservationsRiskLabels
 from video_embedding.models.video_embedder import VideoEmbedder
-from video_embedding.utils import all_trial_names, behaviour_trial_names, set_session, visualize_labelled_video
+from video_embedding.utils import all_trial_names, set_session, visualize_labelled_video
 from risk_estimation.scripts.pretty_confusion_matrix import pp_matrix_from_data
 import video_embedding
 
@@ -59,12 +59,8 @@ def main(args):
     risk_estimator = get_risk_estimator(args, video_embedder)
 
     # Risk Estimator loads data for training
-    if args.behaviours == "":
-        video_names = all_trial_names(args.skill_name, include_repr=True)
-    else:
-        video_names = behaviour_trial_names(args.skill_name, args.behaviours)
-
-
+    video_names = all_trial_names(args.skill_name, include_repr=True)
+    
     for n in range(15,25,3):
         print(f"iterations: {n}")
         train_dataloader, test_dataloader, X_test_images, Y_test_images = make_dataset_iteration_number(n, video_names, video_embedder, features=args.features)
@@ -75,7 +71,7 @@ def main(args):
 
         # Test 1
         X_test, Y_test = RiskEstimationDataset.dataloader_to_array(test_dataloader)
-        pred, _ = risk_estimator.sample(X_test)
+        pred, _, _ = risk_estimator.sample(X_test)
         Y_test = Y_test.cpu().numpy().squeeze()
         print(f"Test data samples: {len(Y_test)}, Risky: {len(Y_test[Y_test==1])}, Safe: {len(Y_test[Y_test==0])}")
 
@@ -92,7 +88,7 @@ def main(args):
 
         # Test 2
         X_train, Y_train = RiskEstimationDataset.dataloader_to_array(train_dataloader)
-        pred, _ = risk_estimator.sample(X_train)
+        pred, _, _ = risk_estimator.sample(X_train)
         Y_train = Y_train.cpu().numpy().squeeze()
         print(f"Train data samples: {len(Y_train)}, Risky: {len(Y_train[Y_train==1])}, Safe: {len(Y_train[Y_train==0])}")
 
@@ -106,7 +102,7 @@ def main(args):
             features=eval(args.features),)
         Y = dataset.Y.cpu().numpy().squeeze()
 
-        Y_pred, _ = risk_estimator.sample(dataset.X)
+        Y_pred, _, _ = risk_estimator.sample(dataset.X)
         print(f"Train data samples: {len(Y_pred)}, Risky: {len(Y_pred[Y_pred==1])}, Safe: {len(Y_pred[Y_pred==0])}")
         
         print(f"Only Valuable framedrop: Accuracy on all data: {100 * (Y == Y_pred).mean()}%")
@@ -120,7 +116,7 @@ def main(args):
             features=eval(args.features),)
         Y = dataset.Y.cpu().numpy().squeeze()
 
-        Y_pred, _ = risk_estimator.sample(dataset.X)
+        Y_pred, _, _ = risk_estimator.sample(dataset.X)
         print(f"Train data samples: {len(Y_pred)}, Risky: {len(Y_pred[Y_pred==1])}, Safe: {len(Y_pred[Y_pred==0])}")
         
         print(f"No framedrop: Accuracy on all data: {100 * (Y == Y_pred).mean()}%")
@@ -139,7 +135,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("-n", "--skill_name", default="peg_pick")
     parser.add_argument("-s", "--session", default="", help="Use subdirectory")
-    parser.add_argument("-b", "--behaviours", nargs="+", default=['successful','cables', 'hands'])
 
     parser.add_argument("-l", "--video_latent_dim", default=8)
     parser.add_argument("-e", "--epoch", default=800, type=int)

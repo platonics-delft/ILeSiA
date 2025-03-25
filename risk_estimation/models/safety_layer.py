@@ -7,36 +7,15 @@ from typing import Iterable
 
 import video_embedding, risk_estimation
 from risk_estimation.models.risk_estimation.result_evaluator import ResultEvaluator
-from risk_estimation.models.risk_estimation.risk_feature_extractor import (
-    StampedLatentObservationsRiskLabels, LatentObservationsRiskLabels, VideoObservationsRiskAndSafeLabels, VideoObservationsRiskLabels, StampedDistLatentObservationsRiskLabels
-)
+from risk_estimation.models.risk_estimation.risk_feature_extractor import *
 from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
-from risk_estimation.models.risk_estimation.frame_dropping import (
-    NoFrameDroppingPolicy,
-    OnlyLabelledFramesDroppingPolicy,
-    OnlyLabelledFramesDroppingPolicyRiskPegPick1,
-    OnlyLabelledFramesDroppingPolicyRiskPegPick2,
-    OnlyLabelledFramesDroppingPolicyRiskPegPlace1,
-    OnlyLabelledFramesDroppingPolicyRiskPegPlace2,
-    OnlyLabelledFramesDroppingPolicyRiskPegDoor1,
-    OnlyLabelledFramesDroppingPolicyRiskPegDoor2,
-)
+from risk_estimation.models.risk_estimation.frame_dropping import *
 from risk_estimation.models.risk_estimator import MLPRiskEstimator, GPRiskEstimator
-from video_embedding.utils import all_trial_names, behaviour_trial_names, visualize_labelled_video, visualize_labelled_video_frame, get_session
-from video_embedding.models.video_embedder import RiskyBehavioralVideoEmbedder
+from video_embedding.utils import all_trial_names, visualize_labelled_video, visualize_labelled_video_frame, get_session
+from video_embedding.models.video_embedder import VideoEmbedder
 
-from risk_estimation.models.risk_estimator import (
-    DistanceRiskEstimator,
-    LinSearchDistanceRiskEstimator,
-    NMDistanceRiskEstimatorDTW,
-    GPRiskEstimator,
-    LRHyperTrainDistanceRiskEstimator,
-    MLPRiskEstimator,
-    MinHyperTrainDistanceRiskEstimator,
-    ResNetRiskEstimator,
-    sample_and_save_on_video,
-)
-from video_embedding.models.nerual_networks.autoencoder import LargeAutoencoder, Autoencoder, CustomResnetStage1, CustomResnetStage2, CustomResnetStage3, CustomResnetStage4, CustomResnetStage5
+from risk_estimation.models.risk_estimator import *
+from video_embedding.models.nerual_networks.autoencoder import *
 
 import rospy
 import time
@@ -90,7 +69,7 @@ class SafetyLayer:
             else:
                 raise Exception("Not found")
 
-        self.video_embedder = RiskyBehavioralVideoEmbedder(name=skill_name, latent_dim=latent_dim, nn_model=LargeAutoencoder)
+        self.video_embedder = VideoEmbedder(name=skill_name, latent_dim=latent_dim, nn_model=LargeAutoencoder)
         if not enable_risk_estimator:
             self.video_embedder = None
             return
@@ -314,15 +293,11 @@ class SafetyLayer:
             return 0.0, 0.0
         x, _ = self.feature_extractor.extract(observations, self.video_embedder)
         t1 = time.perf_counter()
-        alpha = float(observations[4].squeeze())
-        if alpha < 0.5:
-            system_risk_pred, risk = self.risk_estimator.sample(x)
-        else:
-            system_risk_pred, risk = self.risk_estimator2.sample(x)
-
+        system_risk_pred, risk, std = self.risk_estimator.sample(x)
+        
         system_risk_pred = int(np.array(system_risk_pred).squeeze())
         risk = float(np.array(risk).squeeze())
-        print(f"pred: {system_risk_pred}, risk: {risk}, alpha: {alpha}, {time.perf_counter()-t1}")
+        print(f"pred: {system_risk_pred}, risk: {risk}, std: {std}, alpha: {float(observations[4].squeeze())}, {time.perf_counter()-t1}")
 
         return system_risk_pred, risk
     
@@ -393,6 +368,9 @@ def get_risk_estimator(approach, skill_name, xdim, video_embedder, out_assessmen
             out_assessment=out_assessment, train_patience=train_patience, train_epoch=train_epoch)
     elif approach == "L+GP+2SKIP":
         return GPRiskEstimator(name=skill_name, xdim=xdim, learning_rate=0.01, arch="L+GP+2SKIP", 
+            out_assessment=out_assessment, train_patience=train_patience, train_epoch=train_epoch)  
+    elif approach == "TwinGP":
+        return TwinGPRiskEstimator(name=skill_name, xdim=xdim, learning_rate=0.01, 
             out_assessment=out_assessment, train_patience=train_patience, train_epoch=train_epoch)  
     # Distance based models
     elif approach == 'DistLS':

@@ -19,7 +19,7 @@ def main(args):
     X = dataset.X
     assert len(X) == len(data['img'])
 
-    pred, risk = sl.sample(torch.tensor(X.cpu().numpy(), dtype=torch.long).cuda())        
+    pred, risk, std = sl.sample(torch.tensor(X.cpu().numpy(), dtype=torch.long).cuda())        
     visualize_labelled_video(data['img'], {'risk_flag': pred}, printer=True)
 
 

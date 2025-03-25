@@ -4,30 +4,19 @@ from typing import Iterable, List
 from risk_estimation.models.safety_layer import SafetyLayer
 from risk_estimation.models.risk_estimation.frame_dropping import NoFrameDroppingPolicy, OnlyLabelledFramesDroppingPolicy
 from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
-from risk_estimation.models.risk_estimation.risk_feature_extractor import LatentObservationsRiskLabels, StampedDistLatentObservationsRiskLabels, StampedLatentObservationsRiskLabels, VideoObservationsRiskAndSafeLabels, LatentObservationsRiskLabelsPriorRisk, StampedDistLatentObservationsRiskLabelsPriorRisk, StampedLatentObservationsRiskLabelsPriorRisk
+from risk_estimation.models.risk_estimation.risk_feature_extractor import *
 from risk_estimation.models.risk_estimator import (
     DistanceRiskEstimator,
-    NMDistanceRiskEstimatorDTW,
     MLPRiskEstimator,
 )
 import video_embedding, risk_estimation
 from torch.utils.data import DataLoader
-from video_embedding.models.video_embedder import VideoEmbedder, RiskyBehavioralVideoEmbedder
+from video_embedding.models.video_embedder import VideoEmbedder, VideoEmbedder
 
 from scipy.spatial.distance import cosine, euclidean
 from video_embedding.utils import all_trial_names, get_session, set_session
 
-from risk_estimation.models.risk_estimator import (
-    DistanceRiskEstimator,
-    LinSearchDistanceRiskEstimator,
-    NMDistanceRiskEstimatorDTW,
-    GPRiskEstimator,
-    LRHyperTrainDistanceRiskEstimator,
-    LRRiskEstimator,
-    MLPRiskEstimator,
-    MinHyperTrainDistanceRiskEstimator,
-    sample_and_save_on_video,
-)
+from risk_estimation.models.risk_estimator import *
 from risk_estimation.models.risk_estimation.result_evaluator import ResultEvaluator
 from risk_estimation.models.risk_estimation.frame_dropping import NoFrameDroppingPolicy, OnlyLabelledFramesDroppingPolicy
 import pandas as pd
@@ -70,7 +59,7 @@ def test_final_benchmarks(
     set_session(session)
     results = {}
     for skill_name in final_benchmark_skills:
-        video_embedder = RiskyBehavioralVideoEmbedder(name=skill_name, latent_dim=video_latent_dim)
+        video_embedder = VideoEmbedder(name=skill_name, latent_dim=video_latent_dim)
         video_embedder.load_model()
 
         risk_estimator = GPRiskEstimator(name=skill_name, xdim=features.xdim(video_latent_dim), learning_rate=0.01, 

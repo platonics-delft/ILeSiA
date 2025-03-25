@@ -65,7 +65,7 @@ class MarkovianRiskEstimator():
         assert X.ndim == 2
 
         risk = self.model.forward(X).cpu().detach().numpy().ravel()
-        return self.risk_to_decision(risk), risk
+        return self.risk_to_decision(risk), risk, np.zeros(len(risk))
     
     def set_feature_extractor(self, feature_extractor: FeatureExtractor):
         self.feature_extractor = feature_extractor
@@ -92,11 +92,11 @@ class MarkovianRiskEstimator():
         except AttributeError:
             out_assessment = ""
         try:
-            trained_epoch = f"trained{round(self.trained_epoch, -2)}"
+            trained_epoch = f"ep{round(self.trained_epoch, -2)}"
         except AttributeError:
             trained_epoch = ""
 
-        return f"{self.APPROACH}_{arch}_{out_assessment}_{xdim}_{patience}_{lr}"#_{trained_epoch}"
+        return f"{self.APPROACH}_{arch}_{out_assessment}_{xdim}_{patience}_{lr}_{trained_epoch}"
 
     def split_dataloader(self, dataloader):
         dataset = dataloader.dataset
@@ -237,48 +237,115 @@ class ResNetRiskEstimator(MarkovianRiskEstimator):
             # print(f"observed variance: {std}")
             # pred = self.risk_to_decision(risk)
         
-        print(pred)
         self.model.train()
-        return pred, pred #risk
+        return pred, pred, 0.0
 
-class CombinedGPRiskEstimator():
+class TwinGPRiskEstimator():
+    APPROACH = "TwinGP"
+    TIME_FEATURE_INDEX = -1 # the last feature is time
+
     def __init__(self, *args, **kwargs):
         self.models = [
             GPRiskEstimator(*args, **kwargs),
             GPRiskEstimator(*args, **kwargs),
         ]
-    
-    def sample(self, input_data):
-        
-        def get_alphas_from_observations(data):
-            # this assert might be deleted later
-            # I need to check here that I get alpha (time) of demonstration
-            assert len(data[0]) in [10,14,18,26,34,50,66]
 
-            return data[:,-2]
+    @property
+    def dataloader_test_for_plot(self):
+        return self.models[0].dataloader_test_for_plot
+    
+    @dataloader_test_for_plot.setter
+    def dataloader_test_for_plot(self, dataloader):
+        dataloaders = self.split_dataloader_to_models(dataloader)
+        for dataloader, model in zip(dataloaders, self.models):
+            model.dataloader_test_for_plot = dataloader
+
+    @property
+    def dataloader_nodrop_for_plot(self):
+        return self.models[0].dataloader_nodrop_for_plot
+
+    @dataloader_nodrop_for_plot.setter
+    def dataloader_nodrop_for_plot(self, dataloader):
+        dataloaders = self.split_dataloader_to_models(dataloader)
+        for dataloader, model in zip(dataloaders, self.models):
+            model.dataloader_nodrop_for_plot = dataloader
+
+    def sample(self, input_data):
+        def get_alphas_from_observations(data):
+            assert len(data[0]) in [9, 10, 13, 14, 17, 18]
+            return data[:,self.TIME_FEATURE_INDEX]
         
         alphas = get_alphas_from_observations(input_data)
-
-        r = []
-        for alpha in alphas:
+        
+        preds = []
+        risks = []
+        stds = []
+        for alpha, x in zip(alphas, input_data):
             # choose model
-            r.append(self.models[int(alpha * len(self.models))].predict(input_data))
-
-        return r
+            pred, risk, std = self.models[int(alpha * len(self.models))].sample(x)
+            preds.append(int(pred))
+            risks.append(float(risk))
+            stds.append(float(std))
+        return preds, risks, stds
+    
+    def encode_params_as_str(self):
+        return self.models[0].encode_params_as_str()+"_twin"
 
     def load_model(self):
-        for n,model in enumerate(self.models):
-            model.load_model(model_special=f"{n}")
-    
-    def save_model(self):
-        for n,model in enumerate(self.models):
-            model.save_model(model_special=f"{n}")
 
-    def training_loop(self, dataloaders):
-        assert isinstance(dataloaders, list), "There must be a list of dataloaders!"
+        print(f"Loading Risk Estimation model: {self.models[0].model_path}/{self.models[0].name}_{self.__class__.__name__}_model.pt")
+        checkpoints = torch.load(f"{self.models[0].model_path}/{self.models[0].name}_{self.__class__.__name__}_model.pt")
+
+        for checkpoint, model in zip(checkpoints, self.models):
+            model.create_model(checkpoint['X'], checkpoint['Y'])
+            model.model.load_state_dict(checkpoint['model_state_dict'])
+            model.model.eval()
+            model.move_model_to_cuda()
+
+    def save_model(self):
+        model_to_save = []
+        for n,model in enumerate(self.models):
+            model_to_save.append(
+                {
+                    "model_state_dict": model.model.state_dict(), 
+                    "X": model.model.train_x,
+                    "Y": model.model.train_y,
+                }
+            )
+        pathlib.Path(f"{self.models[0].model_path}").mkdir(parents=True, exist_ok=True)
+        torch.save(model_to_save, f"{self.models[0].model_path}/{self.models[0].name}_{self.__class__.__name__}_model.pt")
+        torch.save(model_to_save, f"{self.models[0].model_path}/{self.models[0].name}_{self.models[0].encode_params_as_str()}_model.pt")
+
+    def split_dataloader_to_models(self, dataloader):
+        dataset = dataloader.dataset
+        batch_size = dataloader.batch_size
+        
+        assert len(dataset[0][0]) in [9, 10, 13, 14, 17, 18]
+
+        low_indices = []
+        high_indices = []
+        
+        for i in range(len(dataset)):
+            x, y = dataset[i]  # Extract (x, y)
+            
+            if x[self.TIME_FEATURE_INDEX] < 0.5:
+                low_indices.append(i)
+            else:
+                high_indices.append(i)
+
+        return [
+            DataLoader(Subset(dataset, low_indices), batch_size=batch_size, shuffle=True),
+            DataLoader(Subset(dataset, high_indices), batch_size=batch_size, shuffle=True),
+        ] 
+
+    def training_loop(self, dataloader, early_stop=True):
+        
+        dataloaders = self.split_dataloader_to_models(dataloader)
+        
         for dl,model in zip(dataloaders,self.models):
             print(f"training new dataloader")
-            model.training_loop(dl)
+            model.training_loop(dl, early_stop=early_stop)
+
 
 class GPRiskEstimator(MarkovianRiskEstimator):
     APPROACH = "GP"
@@ -304,13 +371,12 @@ class GPRiskEstimator(MarkovianRiskEstimator):
         self.learning_rate = learning_rate
         self.arch = arch
         self.out_assessment = out_assessment
-        print("out_assessment: ", self.out_assessment)
         self.patience = train_patience
         self.train_epoch = train_epoch
 
-    def load_model(self, model_special:str = ""):
-        print(f"Loading Risk Estimation model: {self.model_path}/{self.name}_{self.__class__.__name__}_model{model_special}.pt")
-        checkpoint = torch.load(f"{self.model_path}/{self.name}_{self.__class__.__name__}_model{model_special}.pt")
+    def load_model(self):
+        print(f"Loading Risk Estimation model: {self.model_path}/{self.name}_{self.__class__.__name__}_model.pt")
+        checkpoint = torch.load(f"{self.model_path}/{self.name}_{self.__class__.__name__}_model.pt")
 
         self.create_model(checkpoint['X'], checkpoint['Y'])
 
@@ -318,7 +384,7 @@ class GPRiskEstimator(MarkovianRiskEstimator):
         self.model.eval()
         self.move_model_to_cuda()
 
-    def save_model(self, model_special:str = ""):
+    def save_model(self):
         """Overloaded function, saves also ra_model
         """        
         pathlib.Path(f"{self.model_path}").mkdir(parents=True, exist_ok=True)
@@ -326,12 +392,12 @@ class GPRiskEstimator(MarkovianRiskEstimator):
             "model_state_dict": self.model.state_dict(), 
             "X": self.model.train_x,
             "Y": self.model.train_y,
-            }, f"{self.model_path}/{self.name}_{self.__class__.__name__}_model{model_special}.pt")
+            }, f"{self.model_path}/{self.name}_{self.__class__.__name__}_model.pt")
         torch.save({
             "model_state_dict": self.model.state_dict(), 
             "X": self.model.train_x,
             "Y": self.model.train_y,
-            }, f"{self.model_path}/{self.name}_{self.encode_params_as_str()}_model{model_special}.pt")
+            }, f"{self.model_path}/{self.name}_{self.encode_params_as_str()}_model.pt")
 
         
     def create_model(self, X, Y):        
@@ -349,11 +415,6 @@ class GPRiskEstimator(MarkovianRiskEstimator):
         elif self.arch == 'L+GP+2SKIP':
             self.model = GPModelPreproFeatureSkip(X, Y, self.likelihood, ard=self.ard, n_features_to_skip=2)
         else: raise Exception()
-
-        # print("b4 ", self.model.covar_module.base_kernel.lengthscale)
-        # self.model.covar_module.base_kernel.lengthscale = 10.0
-        # print("af ", self.model.covar_module.base_kernel.lengthscale)
-
 
     def move_model_to_cuda(self):
         self.model=self.model.cuda()
@@ -388,9 +449,9 @@ class GPRiskEstimator(MarkovianRiskEstimator):
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(self.likelihood, self.model)
 
         early_stopping = GPEarlyStoppingAndPlot(self.patience, dataloader, validation_dataloader, self.dataloader_test_for_plot, self.dataloader_nodrop_for_plot)
-        epochs_iter = tqdm(range(self.train_epoch))
+        self.epochs_iter = tqdm(range(self.train_epoch))
         try:
-            for i in epochs_iter:
+            for i in self.epochs_iter:
     
                 optimizer.zero_grad()
                 output = self.model(X)
@@ -418,7 +479,7 @@ class GPRiskEstimator(MarkovianRiskEstimator):
     
     def sample(self, X):
         if X.ndim == 1:
-            X = X[None, X]
+            X = X.unsqueeze(0)
         assert X.ndim == 2
 
         self.model.eval()
@@ -434,35 +495,13 @@ class GPRiskEstimator(MarkovianRiskEstimator):
                 risk = mean
             elif self.out_assessment == 'cautious':
                 risk = mean + std
-            elif self.out_assessment == 'max':
-                risk = np.max(np.array([mean, std]), axis=0)
             else: raise Exception()
 
-            # print(f"observed variance: {std}")
             pred = self.risk_to_decision(risk)
         
         self.model.train()
         self.likelihood.train()
-        return pred, risk
-    
-    def sample_uncertainty(self, X):
-        if X.ndim == 1:
-            X = X[None, X]
-        assert X.ndim == 2
-
-        self.model.eval()
-        self.likelihood.eval()
-
-        with torch.no_grad(), gpytorch.settings.fast_pred_var():
-            observed_pred = self.likelihood(self.model(X))
-            mean = observed_pred.mean.cpu().numpy()
-            std = observed_pred.stddev.cpu().numpy()
-
-            std_pred = self.risk_to_decision(std)
-        
-        self.model.train()
-        self.likelihood.train()
-        return std_pred, std
+        return pred, risk, std
 
 import collections
 import matplotlib.pyplot as plt
@@ -515,6 +554,7 @@ class GPEarlyStoppingAndPlot():
         self.all_acc_tests.append(acc_test)
         self.all_acc_alldrops.append(acc_nodrop)
 
+        risk_estimator.epochs_iter.set_description(f"Tr: {acc_test:3.0f}%, Test: {acc_train:3.0f}%")
         if self.use_test_data_for_stopping:
             if (acc_test <= sum(self.acc_tests)/len(self.acc_tests) and epoch > self.patience): #or (acc_test > 99 and acc_train > 99) or (acc_train > 99 and acc_test > 96 and self.acc_tests[-2] > acc_test):
                 print(f"Early stopping on epoch {epoch}, acc_train: {acc_train}")
@@ -530,17 +570,17 @@ class GPEarlyStoppingAndPlot():
 
     def validate(self, risk_estimator):
 
-        Y_pred, _ = risk_estimator.sample(self.X_train)
+        Y_pred, _, _ = risk_estimator.sample(self.X_train)
         acc_train =  100 * (self.Y_train == Y_pred).mean()
-        Y_pred, _ = risk_estimator.sample(self.X_validation)
+        Y_pred, _, _ = risk_estimator.sample(self.X_validation)
         acc_validation =  100 * (self.Y_validation == Y_pred).mean()
 
         acc_test = None
         acc_nodrop = None
         if risk_estimator.dataloader_test_for_plot is not None:
-            Y_pred, _ = risk_estimator.sample(self.X_test)
+            Y_pred, _, _ = risk_estimator.sample(self.X_test)
             acc_test =  100 * (self.Y_test == Y_pred).mean()
-            Y_pred, _ = risk_estimator.sample(self.X_nodrop)
+            Y_pred, _, _ = risk_estimator.sample(self.X_nodrop)
             acc_nodrop =  100 * (self.Y_nodrop == Y_pred).mean()
         
         return acc_train, acc_validation, acc_test, acc_nodrop
@@ -601,16 +641,13 @@ class MLPRiskEstimator(MarkovianRiskEstimator):
         else: raise Exception()
 
     def training_loop(self, dataloader, early_stop=True):
-        best_val_metric = np.inf
-        found_new_best = False
-        no_improvement_count = 0
-        epochs_iter = tqdm(range(self.train_epoch))
+        self.epochs_iter = tqdm(range(self.train_epoch))
 
         dataloader, validation_dataloader = self.split_dataloader(dataloader)
 
         early_stopping = GPEarlyStoppingAndPlot(self.patience, dataloader, validation_dataloader, self.dataloader_test_for_plot, self.dataloader_nodrop_for_plot)
         try:
-            for i in epochs_iter:
+            for i in self.epochs_iter:
                 for inputs, labels in dataloader:
                     labels = torch.tensor(labels, dtype=torch.float32).cuda()
                     
@@ -620,25 +657,11 @@ class MLPRiskEstimator(MarkovianRiskEstimator):
                     loss.backward()
                     self.optimizer.step()
 
-                # Check for early stopping
-                    if loss < best_val_metric:
-                        best_val_metric = loss
-                        found_new_best = True
-
                 if early_stop:
                     if i%5 == 0:
                         if early_stopping(i, self):
                             break
-                # if found_new_best:
-                #     no_improvement_count = 0
-                #     found_new_best = False
-                # else:
-                #     no_improvement_count += 1
 
-                # if no_improvement_count >= self.patience:
-                #     print(f"No improvement for {self.patience} epochs. Stopping training.")
-                #     self.trained_epoch = i
-                #     return
         except KeyboardInterrupt:
             print("Stopping on interrupt")
         finally:
@@ -746,7 +769,7 @@ class DistanceRiskEstimator(MarkovianRiskEstimator):
             ret_pred.append(pred)
             ret_risk.append(risk_dist)
 
-        return np.array(ret_pred), np.array(ret_risk)
+        return np.array(ret_pred), np.array(ret_risk), 0.0
 
     def load_representation(self, name, video_embedder):
         data = RiskEstimationDataset.load_video_data(name)
@@ -853,13 +876,13 @@ class LinSearchDistanceRiskEstimator(DistanceRiskEstimator):
         
         for threshold in thresholds:
             self.thr = threshold
-            Y_pred, _ = self.sample(X)
+            Y_pred, _, _ = self.sample(X)
             score = accuracy_score(Y_true.cpu().numpy(), Y_pred)
             if score > best_score:
                 best_score = score
                 best_threshold = threshold
         
-        return best_threshold, best_score
+        return best_threshold, best_score, 0.0
     
 
     def training_loop(self, dataloader):
@@ -948,7 +971,7 @@ class MinHyperTrainDistanceRiskEstimator(DistanceRiskEstimator):
         X = X.cpu().numpy().squeeze()
         y = y.cpu().numpy().squeeze()
 
-        pred, risks = self.sample(X)
+        pred, risks, _ = self.sample(X)
         
         if not search_for_outliers:
             self.thr = np.min(risks[y == 1]) - 1e-4
@@ -997,7 +1020,7 @@ class LRHyperTrainDistanceRiskEstimator(DistanceRiskEstimator):
 
     def sample_with_thr(self, x, thr):
         self.thr = thr
-        ret, ret_risk = self.sample(x)
+        ret, ret_risk, _ = self.sample(x)
         return ret, ret_risk
 
     def compute_gradient_numerical(self, X, y, weight, eps=5e-2):
@@ -1048,24 +1071,7 @@ class LRHyperTrainDistanceRiskEstimator(DistanceRiskEstimator):
         self.thr = threshold
         print(f"Threshold is {self.thr}")
 
-
-class NMLRHyperTrainDistanceRiskEstimator(NMDistanceRiskEstimator, LRHyperTrainDistanceRiskEstimator):
-    pass
-
-
-class NMDistanceRiskEstimatorDTW(NMDistanceRiskEstimator):
-    # def __init__(self, name, dist_fun=None, thr=None, dtw_fun=cosine):
-    #     super().__init__(name=name, dist_fun=dist_fun, thr=thr)
-    #     self.dtw_fun = dtw_fun
-
-    def compare_trajectories(self, encoded_traj_1, encoded_traj_2):
-        distance, path = fastdtw(encoded_traj_1, encoded_traj_2, dist=cosine)
-        pred = []
-        for p1, p2 in path:
-            pred.append(self.test(encoded_traj_1[p1], encoded_traj_2[p2]))
-        assert len(pred) == len(np.array(path)[:,0])
-        return pred, np.array(path)[:,1]
-    
+  
 
 def interp(original_array, new_length):
     new_indices = np.linspace(0, len(original_array) - 1, new_length)
@@ -1188,37 +1194,7 @@ def sample_and_save_on_video(video_name: str, video_embedder, risk_estimator, fe
         features=LatentObservationsSafeLabels
     )
 
-    if isinstance(risk_estimator, (list,tuple)):
-        assert dataset.X.shape[1] in [10,14,18,26,34]
-
-        pred = torch.zeros((len(dataset.X)))
-        risks = np.zeros((len(dataset.X)))
-        pred_std = torch.zeros((len(dataset.X)))
-        risks_std = np.zeros((len(dataset.X)))
-        for n,x in enumerate(dataset.X):
-            if x[-2].item() < 0.5:
-                y_pred, risk = risk_estimator[0].sample(torch.unsqueeze(x, dim=0))
-                y_pred_std, risk_std = risk_estimator[0].sample_uncertainty(torch.unsqueeze(x, dim=0))
-            else:
-                y_pred, risk = risk_estimator[1].sample(torch.unsqueeze(x, dim=0))
-                y_pred_std, risk_std = risk_estimator[1].sample_uncertainty(torch.unsqueeze(x, dim=0))
-            pred[n] = y_pred[0]
-            risks[n] = risk[0]
-            risks_std[n] = risk_std[0]
-            pred_std[n] = y_pred_std[0]
-        # try:
-        # except AttributeError:
-        #     Y_pred_std = None
-        pred = np.array(pred)
-        risks = np.array(risks)
-        pred_std = np.array(pred_std)
-        risks_std = np.array(risks_std)
-
-    
-        
-    else:
-        pred, risks = risk_estimator.sample(dataset.X.squeeze())
-        y_pred_std, risks_std = risk_estimator.sample_uncertainty(dataset.X.squeeze())
+    pred, risks, std = risk_estimator.sample(dataset.X.squeeze())
     
     correct = (pred == dataset.Y.cpu().numpy().squeeze())
     safe_labels = safe_labels.Y.cpu().numpy().squeeze()
@@ -1234,13 +1210,8 @@ def sample_and_save_on_video(video_name: str, video_embedder, risk_estimator, fe
         has_label = interp(has_label, len(correct)) # len adjusted to current video
 
 
-    df = pd.DataFrame(np.array([risks, correct, safe_labels, risk_labels, has_label, risks_std]).T, columns=['Risk', 'Correct', 'SafeTrue', 'RiskTrue', 'HasLabel', 'Std'])
-    if isinstance(risk_estimator, (list,tuple)):
-        df.to_csv(f"{path}/{video_name}_{risk_estimator[0].encode_params_as_str()}_twin.csv", index_label='Time')
-    else:
-        df.to_csv(f"{path}/{video_name}_{risk_estimator.encode_params_as_str()}.csv", index_label='Time')
-    
-
+    df = pd.DataFrame(np.array([risks, correct, safe_labels, risk_labels, has_label, std]).T, columns=['Risk', 'Correct', 'SafeTrue', 'RiskTrue', 'HasLabel', 'Std'])
+    df.to_csv(f"{path}/{video_name}_{risk_estimator.encode_params_as_str()}.csv", index_label='Time')
 
     save_models_index_list(path, video_name)
 

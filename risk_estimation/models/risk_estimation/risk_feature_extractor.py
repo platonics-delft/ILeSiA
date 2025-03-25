@@ -162,11 +162,11 @@ class StampedDistLatentObservationsRiskLabels(FeatureExtractor):
         # ugly
         from risk_estimation.models.risk_estimator import DistanceRiskEstimator
         dre = DistanceRiskEstimator(video_embedder.name, dist_fun=cosine, thr=0.0, video_embedder=video_embedder)
-        _, similarity_dist = dre.sample(torch.cat((latent, frame_numbers), axis=1).detach().cpu().numpy()) # (x, 1, 1)
+        _, similarity_dist, _ = dre.sample(torch.cat((latent, frame_numbers), axis=1).detach().cpu().numpy()) # (x, 1, 1)
 
         similarity_dist = torch.tensor(np.array([similarity_dist]).T, dtype=torch.int).cuda()
         # frame_numbers = frame_numbers.squeeze(2) # (x, 1) 
-        X = torch.cat((latent, frame_numbers, similarity_dist), axis=1)
+        X = torch.cat((latent, similarity_dist, frame_numbers), axis=1)
         Y = cls.RiskLabels(data)
         return X, Y
     
@@ -203,7 +203,7 @@ class StampedDistRecErrLatentObservationsRiskLabels(FeatureExtractor):
         losses = torch.tensor(losses).cuda()
         
         # frame_numbers = frame_numbers.squeeze(2) # (x, 1) 
-        X = torch.cat((latent, frame_numbers, similarity_dist, losses), axis=1)
+        X = torch.cat((latent, similarity_dist, losses, frame_numbers), axis=1)
         Y = cls.RiskLabels(data)
         return X, Y
     

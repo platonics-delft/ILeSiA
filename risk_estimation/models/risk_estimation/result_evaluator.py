@@ -46,34 +46,9 @@ class ResultEvaluator():
 
     def __call__(self, risk_estimator, video_embedder, X_test, Y_test, X_test_images=None, Y_test_images=None):
         Y_test = self.to_cpu(Y_test)
-        if isinstance(risk_estimator, list):
-            assert X_test.shape[1] in [10,14,18,26,34]
-
-            Y_pred = torch.zeros((len(X_test)))
-            Y_pred_std = torch.zeros((len(X_test)))
-            for n,x in enumerate(X_test):
-                if x[-2].item() < 0.5:
-                    y_pred, _ = risk_estimator[0].sample(torch.unsqueeze(x, dim=0))
-                    y_pred_std, _ = risk_estimator[0].sample_uncertainty(torch.unsqueeze(x, dim=0))
-                else:
-                    y_pred, _ = risk_estimator[1].sample(torch.unsqueeze(x, dim=0))
-                    y_pred_std, _ = risk_estimator[1].sample_uncertainty(torch.unsqueeze(x, dim=0))
-                Y_pred[n] = y_pred[0]
-                Y_pred_std[n] = y_pred_std[0]
-            # try:
-            # except AttributeError:
-            #     Y_pred_std = None
-            Y_pred = np.array(Y_pred)
-            Y_pred_std = np.array(Y_pred_std)
-
-        else:
-            Y_pred, _ = risk_estimator.sample(X_test)
-            try:
-                Y_pred_std, _ = risk_estimator.sample_uncertainty(X_test)
-            except AttributeError:
-                Y_pred_std = None
-
-        print(f"Results: {self.name}")
+        
+        Y_pred, risk, std = risk_estimator.sample(X_test)
+        
         if "accuracy" in self.iwanttosee:
             self.acc(Y_test, Y_pred)
         if "accuracy" in self.iwanttosave:
@@ -98,7 +73,7 @@ class ResultEvaluator():
             raise NotImplementedError
 
         if "image_triplets" in self.iwanttosee:
-            self.image_triplets(video_embedder, Y_test, Y_pred, Y_pred_std, X_test_images, Y_test_images)
+            self.image_triplets(video_embedder, Y_test, Y_pred, std > 0.5, X_test_images, Y_test_images)
         if "image_triplets" in self.iwanttosave:
             raise NotImplementedError
         
@@ -131,10 +106,10 @@ class ResultEvaluator():
         print(f"F1: {f1_}")
 
     def confusion_matrix(self, Y_test, Y_pred):
-        pp_matrix_from_data(Y_test, Y_pred, columns=["Safe", "Danger"], name=self.name, savepath=None) # "pip install ." inside downloaded repo https://github.com/petrvancjr/pretty-print-confusion-matrix
+        pp_matrix_from_data(Y_test, Y_pred, columns=["Safe", "Danger"], name=self.name, savepath=None)
 
     def confusion_matrix_save(self, Y_test, Y_pred):
-        pp_matrix_from_data(Y_test, Y_pred, columns=["Safe", "Danger"], name=self.name, savepath=self.savepath) # "pip install ." inside downloaded repo https://github.com/petrvancjr/pretty-print-confusion-matrix
+        pp_matrix_from_data(Y_test, Y_pred, columns=["Safe", "Danger"], name=self.name, savepath=self.savepath)
 
     def images_where_wrong(self, Y_test, Y_pred, X_test_images, Y_test_images):
         indxs = np.where(Y_test != Y_pred)[0]

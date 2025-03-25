@@ -47,57 +47,52 @@ class OnlyLabelledFramesDroppingPolicy(FrameDropper):
     """    
     mintestcut = -1
     maxtestcut = 99999999
+
+    mintestcut2 = 0
+    maxtestcut2 = 0
+
     @classmethod
     def _filter_frames(cls, data: Tuple):
         idxs = []
         l = len(data[0])
         for i in range(l):
-            if cls.mintestcut < i < cls.maxtestcut:
+            if (cls.mintestcut < i < cls.maxtestcut) or (cls.mintestcut2 < i < cls.maxtestcut2):
                 if data[1][i] == 1 or data[2][i] == 1:
                     idxs.append(i)
                 
         data = cls.filter_dataset_with_idxs(data, idxs)
         return data 
 
-class OnlyLabelledFramesDroppingPolicyRiskPegPick1(OnlyLabelledFramesDroppingPolicy):
+
+class OnlyLabelledFramesDroppingPolicyRiskPegPick(OnlyLabelledFramesDroppingPolicy):
     mintestcut = 60
     maxtestcut = 90
+    mintestcut2 = 480
+    maxtestcut2 = 510
 
-class OnlyLabelledFramesDroppingPolicyRiskPegPick2(OnlyLabelledFramesDroppingPolicy):
-    mintestcut = 480
-    maxtestcut = 510
-
-class OnlyLabelledFramesDroppingPolicyRiskPegDoor1(OnlyLabelledFramesDroppingPolicy):
+class OnlyLabelledFramesDroppingPolicyRiskPegDoor(OnlyLabelledFramesDroppingPolicy):
     mintestcut = 150
     maxtestcut = 240
+    mintestcut2 = 630
+    maxtestcut2 = 710
 
-class OnlyLabelledFramesDroppingPolicyRiskPegDoor2(OnlyLabelledFramesDroppingPolicy):
-    mintestcut = 630
-    maxtestcut = 710
-
-class OnlyLabelledFramesDroppingPolicyRiskPegPlace1(OnlyLabelledFramesDroppingPolicy):
+class OnlyLabelledFramesDroppingPolicyRiskPegPlace(OnlyLabelledFramesDroppingPolicy):
     mintestcut = 60
     maxtestcut = 150
+    mintestcut2 = 400
+    maxtestcut2 = 460
 
-class OnlyLabelledFramesDroppingPolicyRiskPegPlace2(OnlyLabelledFramesDroppingPolicy):
-    mintestcut = 400
-    maxtestcut = 460
-
-class OnlyLabelledFramesDroppingPolicyRiskSliderMove1(OnlyLabelledFramesDroppingPolicy):
+class OnlyLabelledFramesDroppingPolicyRiskSliderMove(OnlyLabelledFramesDroppingPolicy):
     mintestcut = 30
     maxtestcut = 90
+    mintestcut2 = 215
+    maxtestcut2 = 245
 
-class OnlyLabelledFramesDroppingPolicyRiskSliderMove2(OnlyLabelledFramesDroppingPolicy):
-    mintestcut = 215
-    maxtestcut = 245
-
-class OnlyLabelledFramesDroppingPolicyRiskMoveAround1(OnlyLabelledFramesDroppingPolicy):
+class OnlyLabelledFramesDroppingPolicyRiskMoveAround(OnlyLabelledFramesDroppingPolicy):
     mintestcut = 60
     maxtestcut = 120
-
-class OnlyLabelledFramesDroppingPolicyRiskMoveAround2(OnlyLabelledFramesDroppingPolicy):
-    mintestcut = 150
-    maxtestcut = 210
+    mintestcut2 = 150
+    maxtestcut2 = 210
 
 class OnlyLabelledPhaseDroppingPolicy(FrameDropper):
     """If risk flag and safe flag is False, datasample is dropped

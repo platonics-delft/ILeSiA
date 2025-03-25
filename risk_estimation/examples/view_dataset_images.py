@@ -4,7 +4,7 @@ from risk_estimation.models.risk_estimation.frame_dropping import NoFrameDroppin
 from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
 from risk_estimation.models.risk_estimation.risk_feature_extractor import LatentObservationsRiskLabels, VideoObservationsRiskAndSafeLabels
 import video_embedding
-from video_embedding.models.video_embedder import RiskyBehavioralVideoEmbedder
+from video_embedding.models.video_embedder import VideoEmbedder
 from video_embedding.utils import all_trial_names, clip_samples, number_of_saved_trials, set_session, tensor_image_to_cv2, visulize_video, load, visualize_labelled_video
 import argparse
 import numpy as np
@@ -23,7 +23,7 @@ def main(args):
     # if input("Save cropped video? (y)") == 'y':
     #     save(data, file=args.video)
     
-    video_embedder = RiskyBehavioralVideoEmbedder(name=args.video, latent_dim=args.latent_dim)
+    video_embedder = VideoEmbedder(name=args.video, latent_dim=args.latent_dim)
     video_names = all_trial_names(args.video, include_repr=True)
     video_embedder.load(video_names)
     video_embedder.load_model()

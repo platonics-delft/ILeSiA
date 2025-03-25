@@ -3,19 +3,15 @@ import pathlib
 from typing import Iterable, Tuple
 import cv2, os
 import numpy as np
-import risk_estimation, video_embedding
-from risk_estimation.models.risk_estimation.frame_dropping import OnlyLabelledFramesDroppingPolicy
-from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
-from risk_estimation.models.risk_estimation.risk_feature_extractor import LatentObservationsRiskLabels
-from risk_estimation.models.risk_estimator import GPRiskEstimator, MLPRiskEstimator, sample_and_save_on_video
+import risk_estimation
+from risk_estimation.models.risk_estimator import sample_and_save_on_video
 
-from video_embedding.models.video_embedder import VideoEmbedder
-from video_embedding.utils import all_trial_names, behaviour_trial_names, get_session, number_of_saved_trials, visualize_labelled_video_frame
+from video_embedding.utils import get_session, number_of_saved_trials
 
 from skills_manager.camera_feedback import image_process
 from skills_manager.lfd import LfD
 from skills_manager.risk_aware_lfd.raplayer import RiskAwarePlayer, InteractivePlayer
-from skills_manager.risk_aware_lfd.risk_policy import WaitForFeedbackRiskPolicy, ContinueRiskPolicy, AbortRiskPolicy, RecoveryRiskPolicy
+from skills_manager.risk_aware_lfd.risk_policy import *
 from skills_manager.feedback import Feedback, RiskAwareFeedback
 
 import rospy
@@ -23,8 +19,6 @@ import rospkg
 from std_msgs.msg import Float32
 
 import torch
-from torch.utils.data import TensorDataset, DataLoader
-
 from playsound import playsound
 from threading import Thread
 
@@ -36,7 +30,7 @@ class RALfD(RiskAwarePlayer, RiskAwareFeedback, LfD):
         Args:
             estimator_risk_policy (str): What to do when Risk Estimator detects risk
             human_risk_policy (str): What to do when Human signalizes risk
-            risk_patience (int): How many risky samples next to each other to trigger risky behaviour. Defaulting to 2.
+            risk_patience (int): How many risky samples next to each other to trigger risk. Defaulting to 2.
             button_press_mode (str):
                 "toggle" - "r" button to set risk flag, "q" button do reset risk flag
                 "momentary" - Pressing a button (e.g. "r") sets flag and releasing the same button to resets flag

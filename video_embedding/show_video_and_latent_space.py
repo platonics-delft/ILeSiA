@@ -2,14 +2,14 @@ import numpy as np
 import torch
 
 from video_embedding.utils import get_session, load, set_session, visualize_labelled_video, visulize_video, load_video
-from video_embedding.models.video_embedder import RiskyBehavioralVideoEmbedder
+from video_embedding.models.video_embedder import VideoEmbedder
 import video_embedding
 import argparse
 
 def main(args):
 
     set_session(args.session)
-    video_embedder = RiskyBehavioralVideoEmbedder(name=args.video,latent_dim=args.latent_dim)
+    video_embedder = VideoEmbedder(name=args.video,latent_dim=args.latent_dim)
     images=load_video(name=args.video)
 
     video_embedder.load_model()

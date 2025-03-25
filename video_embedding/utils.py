@@ -260,25 +260,6 @@ def load_latent_trajectory(name, latent_dim, path=None):
     data = np.load(file_path)
     latent_traj = data['latent_traj']
     return latent_traj
-   
-
-def behaviour_trial_names(skills: str, behaviours=[], include_repr=True):
-    if isinstance(skills, str): # skills is single skill
-        skills = [skills]
-    
-    import rospkg
-    ros_pack = rospkg.RosPack()
-    _package_path = ros_pack.get_path('trajectory_data')
-
-    video_names = []    
-    for skill in skills:
-        df = pd.read_csv(f'{_package_path}/trajectories/{get_session()}/{skill}_description.csv')
-        dfdict = df.to_dict()
-        for video_n in range(len(dfdict['n'])):
-            if dfdict['Behaviours'][video_n] in behaviours:
-                video_names.append(dfdict['Videos'][video_n])
-
-    return video_names
 
 
 def visualize_data_sne(X, Y):

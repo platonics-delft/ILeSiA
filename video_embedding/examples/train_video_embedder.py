@@ -2,22 +2,19 @@
 
 import risk_estimation
 import video_embedding
-from video_embedding.utils import behaviour_trial_names, get_session, set_session
-from video_embedding.models.video_embedder import RiskyBehavioralVideoEmbedder
+from video_embedding.utils import get_session, set_session
+from video_embedding.models.video_embedder import VideoEmbedder
 import argparse
 
 from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
 from risk_estimation.models.risk_estimation.frame_dropping import NoFrameDroppingPolicy, OnlyLabelledFramesDroppingPolicy
 from risk_estimation.models.risk_estimation.risk_feature_extractor import VideoObservationsRiskAndSafeLabels, LatentObservationsRiskLabels, StampedLatentObservationsRiskLabels
 from video_embedding.utils import visualize_labelled_video_frame_inline
-from video_embedding.models.nerual_networks.autoencoder import LargeAutoencoder, Autoencoder, CustomResnetStage1, CustomResnetStage2, CustomResnetStage3, CustomResnetStage4, CustomResnetStage5
+from video_embedding.models.nerual_networks.autoencoder import *
 
-import torchvision
-
-from video_embedding.models.nerual_networks.autoencoder import LargeAutoencoder, Autoencoder, CustomResnetStage1, CustomResnetStage2, CustomResnetStage3, CustomResnetStage4, CustomResnetStage5
 def main(args):
     set_session(args.session)
-    video_embedder = RiskyBehavioralVideoEmbedder(name=args.video[0], latent_dim=int(args.latent_dim), behaviours=args.behaviours, learning_rate=float(args.learning_rate), augmentation=args.augmentation, nn_model=LargeAutoencoder)
+    video_embedder = VideoEmbedder(name=args.video[0], latent_dim=int(args.latent_dim), learning_rate=float(args.learning_rate), augmentation=args.augmentation, nn_model=LargeAutoencoder)
     video_embedder.load(args.video, validation_videos=args.validation_video)
     
     video_embedder.create_video(epoch = args.epoch, patience=args.patience)
@@ -47,10 +44,9 @@ def plot_photos(video_embedder, video):
 def update(args, plot: bool = False):
     assert len(args.video) == 1, "Put update videos to --video_updates"
     assert len(args.update_videos) > 0, "No --video_updates videos"
-    assert args.behaviours is None
     set_session(args.session)
 
-    video_embedder = RiskyBehavioralVideoEmbedder(name=args.video[0], latent_dim=int(args.latent_dim), behaviours=None, frame_dropping=True, learning_rate=float(args.learning_rate))
+    video_embedder = VideoEmbedder(name=args.video[0], latent_dim=int(args.latent_dim), frame_dropping=True, learning_rate=float(args.learning_rate))
     video_embedder.load_model()
 
     print("video_embedder.model_train_record")
@@ -81,7 +77,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--video", nargs="+",
-        default=["peg_door404"],
+        default=["peg_place404"],
         help="put video name or video names for video embedder to be trained on"
     )
     parser.add_argument(
@@ -92,11 +88,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--session",
         default="quantitative_study",
-    )
-    parser.add_argument(
-        "--behaviours", nargs="+",
-        default=None, #["successful", "door"],
-        help=""
     )
     parser.add_argument(
         "--latent_dim",

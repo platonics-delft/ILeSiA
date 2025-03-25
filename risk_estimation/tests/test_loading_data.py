@@ -13,7 +13,7 @@ from risk_estimation.models.risk_estimation.risk_feature_extractor import Latent
 from risk_estimation.models.risk_estimator import MLPRiskEstimator
 import video_embedding
 from video_embedding.models.video_embedder import VideoEmbedder
-from video_embedding.utils import all_trial_names, behaviour_trial_names, set_session
+from video_embedding.utils import all_trial_names, set_session
 
 
 def test_loading_of_risk_aware_data_from_videos(
@@ -81,24 +81,6 @@ def test_loading_of_risk_aware_data_from_videos(
     print(f"train: X shape: {X_train.shape}, Y shape: {Y_train.shape}")
     print(f"test:  X shape: {X_test.shape}, Y shape: {Y_test.shape}")
     print(f"test:  Risky: {len(Y_train[Y_train==1])}, Safe {len(Y_train[Y_train==0])}")
-
-def test_load_video_names_of_specific_behaviours():
-    set_session("manipulation_demo_session")
-    video_names = behaviour_trial_names('peg_pick', behaviours=['successful','peg_rotated','cables','hands'])
-    
-    assert video_names == ['peg_pick', 'peg_pick_trial_0', 'peg_pick_trial_1', 'peg_pick_trial_2', 'peg_pick_trial_3', 'peg_pick_trial_4']
-
-    video_names = behaviour_trial_names('peg_pick', behaviours=['successful'])
-
-    assert video_names == ['peg_pick', 'peg_pick_trial_0']
-
-    video_names = behaviour_trial_names('peg_pick', behaviours=['applied_force'])
-
-    assert video_names == ['peg_pick_trial_5']
-    
-    video_names = behaviour_trial_names('peg_pick', behaviours=[])
-
-    assert video_names == []
 
 
 if __name__ == "__main__":

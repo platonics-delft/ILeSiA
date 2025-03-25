@@ -4,54 +4,31 @@ from models.risk_estimation.result_evaluator import ResultEvaluator
 import risk_estimation
 from risk_estimation.plot_utils import plot_threshold_labelled
 import video_embedding
-from video_embedding.utils import all_trial_names, all_test_names, behaviour_trial_names, set_session, tensor_image_to_cv2, visualize_labelled_video
-from video_embedding.models.video_embedder import RiskyBehavioralVideoEmbedder, VideoEmbedder
-from risk_estimation.models.risk_estimation.frame_dropping import NoFrameDroppingPolicy, OnlyLabelledFramesDroppingPolicy
+from video_embedding.utils import all_trial_names, all_test_names, set_session, tensor_image_to_cv2, visualize_labelled_video
+from video_embedding.models.video_embedder import VideoEmbedder, VideoEmbedder
+from risk_estimation.models.risk_estimation.frame_dropping import *
 from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
-from risk_estimation.models.risk_estimation.risk_feature_extractor import LatentObservationsRiskLabels, StampedLatentObservationsRiskLabels, StampedVideoObservationsRiskLabels, VideoObservationsRiskAndSafeLabels, VideoObservationsRiskLabels, StampedDistLatentObservationsRiskLabels, LatentObservationsRiskLabelsPriorRisk, StampedLatentObservationsRiskLabelsPriorRisk, StampedDistLatentObservationsRiskLabelsPriorRisk
-from risk_estimation.models.risk_estimator import (
-    DistanceRiskEstimator,
-    LinSearchDistanceRiskEstimator,
-    NMDistanceRiskEstimatorDTW,
-    GPRiskEstimator,
-    LRHyperTrainDistanceRiskEstimator,
-    MLPRiskEstimator,
-    MinHyperTrainDistanceRiskEstimator,
-    sample_and_save_on_video,
-)
-from risk_estimation.models.risk_estimation.benchmark_utils import (
-    benchmark_eval_save,
-)
-
+from risk_estimation.models.risk_estimation.risk_feature_extractor import *
+from risk_estimation.models.risk_estimator import *
+from risk_estimation.models.risk_estimation.benchmark_utils import benchmark_eval_save
 from risk_estimation.models.safety_layer import get_risk_estimator_from_args
 
 import argparse
 
-def main(args, i = 0):
+def main(args):
     if args.session != "":
         set_session(args.session)
 
-    video_embedder = RiskyBehavioralVideoEmbedder(
+    video_embedder = VideoEmbedder(
         name=args.skill_name,
         latent_dim=args.video_latent_dim,
-        behaviours=args.encoded_behaviours,
     )
     video_embedder.load_model()
 
     risk_estimator = get_risk_estimator_from_args(args, video_embedder)
 
-    if args.behaviours is None:
-        video_names = all_trial_names(args.skill_name, include_repr=True)
-        test_video_names = all_test_names(args.skill_name)
-    elif args.behaviours == "cross_validation":
-        print("cross-validation experiment")
-        video_names = all_trial_names(args.skill_name, include_repr=True)
-        test_video_names = [video_names.pop(i)]
-    else:
-        video_names = behaviour_trial_names(args.skill_name, args.behaviours)
-        test_video_names = all_test_names(args.skill_name)
-
-
+    video_names = all_trial_names(args.skill_name, include_repr=True)
+    test_video_names = all_test_names(args.skill_name)
 
     train_dataloader, test_dataloader = RiskEstimationDataset.load(
         video_names=video_names,
@@ -200,9 +177,5 @@ if __name__ == "__main__":
     parser.add_argument("--confusion_matrix", action="store_true")
     parser.add_argument("--no_confusion_matrix", dest="confusion_matrix", action="store_false")
     parser.set_defaults(confusion_matrix=True)
-
-    # Special experimental cases -> evaluate bades on descripted risky-behaviours
-    parser.add_argument("--encoded_behaviours", default=None, help="Request encoded model with following risky-behaviours")
-    parser.add_argument("--behaviours", nargs="+", default=None)
 
     main(parser.parse_args())

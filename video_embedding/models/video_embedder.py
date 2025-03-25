@@ -11,8 +11,8 @@ import cv2
 
 import risk_estimation, video_embedding
 from video_embedding.models.elastic_weight_consolidation import ElasticWeightConsolidation
-from video_embedding.utils import behaviour_trial_names, get_session, load, visualize_labelled_video
-from video_embedding.models.nerual_networks.autoencoder import LargeAutoencoder, Autoencoder, CustomResnetStage1, CustomResnetStage2, CustomResnetStage3, CustomResnetStage4, CustomResnetStage5
+from video_embedding.utils import get_session, load, visualize_labelled_video
+from video_embedding.models.nerual_networks.autoencoder import *
 from tqdm import tqdm
 import torchvision
 from torchvision import transforms
@@ -51,8 +51,31 @@ def random_contrast(img, max_delta=0.2):
     return adjust_contrast(img, _factor)
 
 class VideoEmbedder(ElasticWeightConsolidation):
-    def __init__(self, latent_dim=64, nn_model=Autoencoder, batch_size: int = 40, learning_rate: float = 0.01):
-        super(VideoEmbedder, self).__init__()
+    def __init__(self, 
+                name: str,
+                latent_dim: int = 8,
+                batch_size: int = 40,
+                frame_dropping=None,
+                learning_rate: float = 0.01,
+                augmentation: bool = True,
+                nn_model: str = LargeAutoencoder,
+                ):
+        """Has scritly defined paths (see videos_path, models_path, latent_trajectory_path)
+        Args:
+            name (str): Skill and model name
+            latent_dim (int, optional): Defaults to 8.
+            batch_size (int, optional): Defaults to 40.
+            augmentation (bool, optional): Apply affine, perspective, brightness, contrast transformations
+        """     
+        super(VideoEmbedder, self).__init__() #super().__init__(latent_dim=latent_dim, nn_model=nn_model, batch_size=batch_size, learning_rate=learning_rate)
+        self.name = name # skill name
+        self.model_train_record = []
+        
+        self.frame_dropping = frame_dropping
+        self.augmentation = augmentation
+
+        if isinstance(nn_model, str):
+            nn_model = eval(nn_model)
         self.model = nn_model(latent_dim)
         self.latent_dim = latent_dim  
         # Move the model to GPU
@@ -67,15 +90,53 @@ class VideoEmbedder(ElasticWeightConsolidation):
         if not hasattr(self, "augmentation"):
             self.augmentation = False
 
-    def load(self, name: str):
-        """Load videos dataset. Sets:
-            self.dataloader has all train_names demonstrations 
-            self.tensor_images has only images for "name" demonstration
+
+    @property
+    def videos_path(self):
+        return f"{risk_estimation.path}/videos/{get_session()}/"
+
+    @property
+    def models_path(self):
+        return f"{video_embedding.path}/saved_models/{get_session()}/"
+
+    @property
+    def latent_trajectory_path(self):
+        return f"{video_embedding.path}/latent_trajectories/{get_session()}/"
+
+    def save_latent_trajectory(self):
+        path=self.latent_trajectory_path
+
+        latent_traj = self.model.encoder(self.tensor_images)
+        latent_traj = latent_traj.cpu().detach().numpy()
+        pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+        np.savez(path +self.name +'_latent_'+ str(self.latent_dim) +'.npz', latent_traj=latent_traj)
+
+
+    def load(self, videos: Iterable[str], validation_videos: Iterable[str] = []):
+        """Public interface to load videos. The 'videos' can be a string or a list of strings.
         Args:
-            name (str): Assigns name of the model
+            videos (str | Iterable[str]) 
         """
-        self.name = name
-        self.dataloader = self.load_dataset([name])
+        if isinstance(validation_videos, Iterable) and len(validation_videos) == 0:
+            vdl = []
+        elif isinstance(validation_videos, str):
+            vdl = self._load_single_video(validation_videos, validation=True)
+        elif isinstance(validation_videos, Iterable):
+            vdl = self._load_multi_videos(validation_videos, validation=True)
+            
+        assert 'vdl' in locals(), f"Invalid argument validation_videos: {validation_videos}, {type(validation_videos)}, {isinstance(validation_videos, Iterable)}, {len(validation_videos) == 0}"
+
+        self.validation_dataloader = vdl
+
+        if isinstance(videos, str):
+            dl = self._load_single_video(videos)
+        elif isinstance(videos, Iterable):
+            dl = self._load_multi_videos(videos)
+
+        assert dl, "Invalid argument videos"
+    
+        self.dataloader = dl
+
 
     def load_dataset(self, train_names, validation=False, LABELING_AREAS_VID_EMB=True):
         if not validation:
@@ -115,20 +176,20 @@ class VideoEmbedder(ElasticWeightConsolidation):
         if LABELING_AREAS_VID_EMB:
             for v in range(30):
                 # name = f"peg_pick404_test_{v}"
-                # name = f"peg_place404_test_{v}"
-                name = f"peg_door404_test_{v}"
+                name = f"peg_place404_test_{v}"
+                # name = f"peg_door404_test_{v}"
 
                 data = load(file=name)
                 images= data['img']
                 risk_flag = data['risk_flag']
                 safe_flag = data['safe_flag']
                 # images_new=np.zeros((60,64,64))
-                # images_new=np.zeros((150,64,64))
-                images_new=np.zeros((170,64,64))
+                images_new=np.zeros((150,64,64))
+                # images_new=np.zeros((170,64,64))
 
                 # for n,i in enumerate(list(range(60,90)) + list(range(480,510))):
-                # for n,i in enumerate(list(range(60,150)) + list(range(400,460))):
-                for n,i in enumerate(list(range(150,240)) + list(range(630,710))):
+                for n,i in enumerate(list(range(60,150)) + list(range(400,460))):
+                # for n,i in enumerate(list(range(150,240)) + list(range(630,710))):
                     images_new[n]=cv2.resize(images[i], (64, 64), interpolation=cv2.INTER_AREA)
 
                 images = images_new[:, np.newaxis, :, :]
@@ -208,16 +269,17 @@ class VideoEmbedder(ElasticWeightConsolidation):
                 break
 
             pviz.set_description(desc=f"Epoch [{epoch}/{num_epochs}], Loss: {loss.item()}")
-            #if epoch % 5== 0:
-            #    if self.augmentation:
-            #        print('Epoch [{}/{}], Loss: {:.4f}, Valid. Loss: ?'.format(epoch+1, num_epochs, loss.item() )) #, valid_loss_fp))
-            #    else:
-            #        print('Epoch [{}/{}], Loss: {:.4f}, Valid. Loss: {:.4f}'.format(epoch+1, num_epochs, loss.item(), valid_loss_fp))
-
 
         if not self.augmentation:
             self.register_ewc_params()        
+        self.model_train_record.append({
+            "epoch": int(epoch),
+            "loss": float(loss),
+            "name": str(self.name),
+            "train_names": list(self.train_names),
+        })
         return epoch, loss
+
 
     def create_video(self, epoch: int = 1000, patience: int = 1000):
         # train autoencoder
@@ -268,156 +330,13 @@ class VideoEmbedder(ElasticWeightConsolidation):
                 break
         cv2.destroyAllWindows()
 
-    def save_model(self, path=None):
-        torch.save(self.model.state_dict(), f"{path}/{self.name}_model_{self.latent_dim}.pt")
-
-    def load_model(self, path=None, name=None, latent_dim=None):
-        if name is not None: self.name = name
-        if latent_dim is not None: self.latent_dim = latent_dim
-        print(f"Loaded model: {path}/{self.name}_model_{self.latent_dim}.pt")
-        self.model.load_state_dict(torch.load(f"{path}/{self.name}_model_{self.latent_dim}.pt"))
-        self.model.eval()
-    
-    def save_latent_trajectory(self, path=None):
-        latent_traj = self.model.encoder(self.tensor_images)
-        latent_traj = latent_traj.cpu().detach().numpy()
-        pathlib.Path(path).mkdir(parents=True, exist_ok=True)
-        np.savez(path +self.name +'_latent_'+ str(self.latent_dim) +'.npz', latent_traj=latent_traj)
-
-
-class RiskyBehavioralVideoEmbedder(VideoEmbedder):
-    def __init__(self,
-                name: str,
-                latent_dim: int = 8,
-                batch_size: int = 40,
-                behaviours: Iterable[str] = None,
-                frame_dropping=None,
-                learning_rate: float = 0.01,
-                augmentation: bool = True,
-                nn_model: str = Autoencoder,
-                ):
-        """Has scritly defined paths (see videos_path, models_path, latent_trajectory_path)
-            When behaviours given: Model is saved to subfolder named "behaviour1_behaviours2_behaviour3_..."
-        
-        Args:
-            name (str): Skill and model name
-            latent_dim (int, optional): Defaults to 8.
-            batch_size (int, optional): Defaults to 40.
-            behaviours (Iterable[str], optional): Defaults to None.
-                (see trajectory_data/trajectories/<demonstration>_description.csv)
-            augmentation (bool, optional): Apply affine, perspective, brightness, contrast transformations
-        """        
-        if isinstance(nn_model, str):
-            nn_model = eval(nn_model)
-        
-        super().__init__(latent_dim=latent_dim, nn_model=nn_model, batch_size=batch_size, learning_rate=learning_rate)
-        self.name = name # skill name
-        self.behaviours = behaviours
-        self.model_train_record = []
-        
-        self.frame_dropping = frame_dropping
-        self.augmentation = augmentation
-
-    def training_loop(self, num_epochs: int, patience: int):
-        epoch, loss = super().training_loop(num_epochs, patience)
-        self.model_train_record.append({
-            "epoch": int(epoch),
-            "loss": float(loss),
-            "name": str(self.name),
-            "behaviours": self.behaviours,
-            "train_names": list(self.train_names),
-        })
-
-    @property
-    def videos_path(self):
-        return f"{risk_estimation.path}/videos/{get_session()}/"
-
-    @property
-    def models_path(self):
-        return f"{video_embedding.path}/saved_models/{get_session()}/{self.encode_behaviour_folder()}"
-
-    @property
-    def latent_trajectory_path(self):
-        return f"{video_embedding.path}/latent_trajectories/{get_session()}/"
-
-    def save_latent_trajectory(self):
-        return super().save_latent_trajectory(self.latent_trajectory_path)
-
-    def encode_behaviour_folder(self):
-        # Behaviour names to folder name
-        # ["successful", "hand", "cables"] -> "successful_hand_cables"
-        if self.behaviours is None:
-            behaviour_folder = ""
-        else:
-            behaviour_folder = "_".join(self.behaviours.copy())
-        return behaviour_folder
-
-    def load(self, videos: Iterable[str], validation_videos: Iterable[str] = []):
-        """Public interface to load videos. The 'videos' can be a string or a list of strings.
-        Args:
-            videos (str | Iterable[str]) 
-        """
-        if isinstance(validation_videos, Iterable) and len(validation_videos) == 0:
-            vdl = []
-        elif isinstance(validation_videos, str):
-            if self.behaviours is None:
-                vdl = self._load_single_video(validation_videos, validation=True)
-            elif isinstance(self.behaviours, Iterable):
-                vdl = self._load_single_video_behaviours(validation_videos, self.behaviours, validation=True)
-        elif isinstance(validation_videos, Iterable):
-            if self.behaviours is None:
-                vdl = self._load_multi_videos(validation_videos, validation=True)
-            elif isinstance(self.behaviours, Iterable):
-                vdl = self._load_multi_video_behaviours(validation_videos, self.behaviours, validation=True)
-        assert 'vdl' in locals(), f"Invalid argument validation_videos: {validation_videos}, {type(validation_videos)}, {isinstance(validation_videos, Iterable)}, {len(validation_videos) == 0}"
-
-        self.validation_dataloader = vdl
-
-        if isinstance(videos, str):
-            if self.behaviours is None:
-                dl = self._load_single_video(videos)
-            elif isinstance(self.behaviours, Iterable):
-                dl = self._load_single_video_behaviours(videos, self.behaviours)
-        elif isinstance(videos, Iterable):
-            if self.behaviours is None:
-                dl = self._load_multi_videos(videos)
-            elif isinstance(self.behaviours, Iterable):
-                dl = self._load_multi_video_behaviours(videos, self.behaviours)
-        assert dl, "Invalid argument videos"
-    
-        self.dataloader = dl
-
-
-
-    def _load_single_video(self, video, validation=False):
-        print(f"Training on single video: {video}")
-        return self.load_dataset([video], validation=validation)
-
-    def _load_multi_videos(self, videos, validation=False):
-        print(f"Training on multiple videos: {videos}")
-        return self.load_dataset(videos, validation=validation)
-
-    def _load_single_video_behaviours(self, video, behaviours, validation=False):
-        # Loads listed videos in trajectory_data/trajectories/<demonstration>_description.csv file
-        train_names = behaviour_trial_names(self.name, behaviours)
-        
-        print(f"Training single video {video} with behaviours {behaviours}")
-        print(f"All video names: {train_names}")
-        return self.load_dataset(train_names, validation=validation)
-
-    def _load_multi_video_behaviours(self, videos, behaviours, validation=False):
-        # For every behaviour, loads listed videos in trajectory_data/trajectories/<demonstration>_description.csv file
-        train_names = list(np.array([behaviour_trial_names(name, behaviours) for name in videos]).flatten())
-        
-        print(f"Training multiple videos {videos} with behaviours {behaviours}")
-        print(f"All video names: {train_names}")
-        return self.load_dataset(train_names, validation=validation)
 
     def save_model(self):
         pathlib.Path(self.models_path).mkdir(parents=True, exist_ok=True) # create dir if not exists
         with open(f"{self.models_path}/{self.name}_model_{self.latent_dim}.json", 'w') as f: # save config
             json.dump(self.model_train_record, f, indent=4)
         torch.save(self.model.state_dict(), f"{self.models_path}/{self.name}_model_{self.latent_dim}.pt") # save model
+
 
     def load_model(self):
         print(f"Loading model: {self.models_path}/{self.name}_model_{self.latent_dim}.pt")
@@ -440,6 +359,21 @@ class RiskyBehavioralVideoEmbedder(VideoEmbedder):
                 self.model_train_record = [model_train_record]
             else:
                 self.model_train_record = model_train_record
+
+    def _load_single_video(self, video, validation=False):
+        print(f"Training on single video: {video}")
+        return self.load_dataset([video], validation=validation)
+
+    def _load_multi_videos(self, videos, validation=False):
+        print(f"Training on multiple videos: {videos}")
+        return self.load_dataset(videos, validation=validation)
+
+
+
+
+
+
+
 
 
 class EarlyStopping:

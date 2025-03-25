@@ -3,21 +3,12 @@ from sklearn.metrics import confusion_matrix
 from risk_estimation.models.risk_estimation.frame_dropping import NoFrameDroppingPolicy, OnlyLabelledFramesDroppingPolicy
 from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
 from risk_estimation.models.risk_estimation.risk_feature_extractor import LatentObservationsRiskLabels, StampedLatentObservationsRiskLabels
-from risk_estimation.models.risk_estimator import (
-    DistanceRiskEstimator,
-    GPRiskEstimator,
-    LRHyperTrainDistanceRiskEstimator,
-    LRRiskEstimator,
-    LinSearchDistanceRiskEstimator,
-    MinHyperTrainDistanceRiskEstimator,
-    NMDistanceRiskEstimatorDTW,
-    MLPRiskEstimator,
-)
-import video_embedding
+from risk_estimation.models.risk_estimator import *
 from video_embedding.models.video_embedder import VideoEmbedder
-import risk_estimation
 from scipy.spatial.distance import cosine, euclidean
 from video_embedding.utils import all_trial_names, number_of_saved_trials, set_session
+import video_embedding
+import risk_estimation
 
 def get_risk_estimator(skill_name, approach, features_cls, video_latent_dim, video_embedder):
 
