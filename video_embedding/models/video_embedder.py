@@ -11,6 +11,7 @@ import cv2
 
 import risk_estimation, video_embedding
 from video_embedding.models.elastic_weight_consolidation import ElasticWeightConsolidation
+from video_embedding.models.get_exp_label_frames import get_labeled_section_frames
 from video_embedding.utils import get_session, load, visualize_labelled_video
 from video_embedding.models.nerual_networks.autoencoder import *
 from tqdm import tqdm
@@ -174,6 +175,8 @@ class VideoEmbedder(ElasticWeightConsolidation):
             list_of_tensor_images.append(tensor_images)
 
         if LABELING_AREAS_VID_EMB:
+            # extra_frames = get_labeled_section_frames(self.name)
+            # list_of_tensor_images.extend(extra_frames)
             for v in range(30):
                 # name = f"peg_pick404_test_{v}"
                 name = f"peg_place404_test_{v}"
@@ -189,7 +192,7 @@ class VideoEmbedder(ElasticWeightConsolidation):
 
                 # for n,i in enumerate(list(range(60,90)) + list(range(480,510))):
                 for n,i in enumerate(list(range(60,150)) + list(range(400,460))):
-                # for n,i in enumerate(list(range(150,240)) + list(range(630,710))):
+                    # for n,i in enumerate(list(range(150,240)) + list(range(630,710))):
                     images_new[n]=cv2.resize(images[i], (64, 64), interpolation=cv2.INTER_AREA)
 
                 images = images_new[:, np.newaxis, :, :]
