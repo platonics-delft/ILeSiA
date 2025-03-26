@@ -6,25 +6,50 @@ import os
 import cv2
 from pathlib import Path
 import matplotlib.gridspec as gridspec
+import matplotlib.patches as mpatches
 
 # Put here the autogen (results forlder) for which you want to generate plots
 # e.g.
-root_dir = "/home/petr/tudelft_ws/src/video_safety_layer/risk_estimation/autogen/"
+root_dir = "/home/petr/Downloads/ilesia_25_03/autogen"
+frame_dropping = True
+
+def skill_framedropping(data, filepath):
+    if "peg_pick404" in filepath:
+        for i in range(len(data["RiskTrue"])):
+            if not ((60 < i < 90) or (480 < i < 510)):
+                data["RiskTrue"][i] = 0.0
+                data['SafeTrue'][i] = 0.0
+    elif "peg_door404" in filepath:
+        for i in range(len(data["RiskTrue"])):
+            if not ((150 < i < 240) or (630 < i < 710)):
+                data["RiskTrue"][i] = 0.0
+                data['SafeTrue'][i] = 0.0 
+    elif "peg_place404" in filepath:
+        for i in range(len(data["RiskTrue"])):
+            if not ((60 < i < 150) or (400 < i < 460)):
+                data["RiskTrue"][i] = 0.0
+                data['SafeTrue'][i] = 0.0 
+    return data
 
 def plotter(filepath, half = "", connection_line=True, series_enabled=True):
     print(filepath)
 
     if "GP+L" in filepath:
-        name = "Linear + GP"
+        name = "Linear + $\mathcal{GP}$"
     elif "GP" in filepath:
-        name = "GP"
+        name = "$\mathcal{GP}$"
+    elif "TwinGP" in filepath:
+        name = "Twin $\mathcal{GP}$"
     elif "MLP" in filepath:
-        name = "MLP"
+        name = "$\mathcal{MLP}$"
 
     plt.rcParams["pdf.use14corefonts"] = True
     plt.rcParams["ps.useafm"] = True
 
     data = pd.read_csv(filepath)
+    if frame_dropping:
+        data = skill_framedropping(data, filepath)
+
     if half != "":
         h = (data.index[-1] // 2)
         if half == "left":
@@ -73,7 +98,7 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True):
 
     for n,frame_n in enumerate(frame_numbers):
         # Annotate a line connecting the bottom x-axis point to the image
-        axs[1].axvline(x=frame_n, color='black', linestyle='--')
+        axs[1].axvline(x=frame_n, color='black', linestyle='--', zorder=12, linewidth=1.0, ymin=0.06, ymax=0.94)
         
         if connection_line:
             xy = (frame_n, 1)  # Endpoint in data coordinates for the bottom plot
@@ -83,24 +108,41 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True):
             fig.add_artist(con)
 
     # Plot vertical lines based on condition
-    for i in range(data.index[0], data.index[-1]):
-        if data['RiskTrue'][i] == 1 or data['SafeTrue'][i] == 1:
-            color = 'blue' if data['Correct'][i] == 1 else 'red'
-            ax.axvline(x=i, color=color, alpha=0.1, zorder=2)
+    # for i in range(data.index[0], data.index[-1]):
+    #     if data['RiskTrue'][i] == 1 or data['SafeTrue'][i] == 1:
+    #         color = 'blue' if data['Correct'][i] == 1 else 'red'
+    #         ax.axvline(x=i, color=color, alpha=0.1, zorder=2)
+    
+    if series_enabled:
+        SLIDINGWINDOW = 5
+        for i in range(data.index[0], data.index[-1]):
+            if i < SLIDINGWINDOW: continue
+            
+            if (np.array(data['Risk'][i-5:i]) > 0.51).all():
+                ax.plot(np.clip(data['Risk'][i-5:i], 0, 1), color="red", linewidth=1.5, zorder=12)
+                # ax.axvline(x=i, color="red", ymin=(0.06/1.12), ymax=0.06+(data['Risk'][i]/1.12), zorder=8)
 
     # Plot the risk data
     if series_enabled:
         series_enabled_text = ""
-        ax.plot(np.clip(data['Risk'], 0, 1), label='Risk Estimation', color="red", linewidth=2, zorder=4)
+        ax.plot(np.clip(data['Risk'] - data['Std'], 0, 1), label='$\mu$', color="green", linewidth=1, zorder=10)
+        ax.plot(np.clip(data['Risk'], 0, 1), label='$r<0.5$ (safe)', color="blue", linewidth=1, zorder=10)
+        
+        ax.fill_between(data.index, 
+                np.clip(data['Risk'], 0, 1), 
+                np.clip(data['Risk'] - 2*data['Std'], 0, 1), 
+                color='green', alpha=0.3, label='$\mu$ ± $\sigma$', zorder=9, hatch="///")
     else:
         series_enabled_text = "_nodata"
     # Add a dashed horizontal line
-    ax.axhline(y=0.5, color='black', linestyle='--', linewidth=1, zorder=2)
+    ax.axhline(y=0.5, color='black', linestyle='--', linewidth=1, zorder=6)
+    ax.axhline(y=1.0, color='black', linestyle='-', linewidth=1, zorder=6)
+    ax.axhline(y=0.0, color='black', linestyle='-', linewidth=1, zorder=6)
 
     # Add vertical text for "Safe" below the line and "Risk" above the line
-    ax.text(data.index[-1]+5, 0.25, 'Safe', rotation='vertical', verticalalignment='center', fontsize=12, zorder=4)
-    ax.text(data.index[-1]+5, 0.75, 'Risk', rotation='vertical', verticalalignment='center', fontsize=12, zorder=4)
-    ax.text(data.index[-1]+5, 0.5, '$\\tau$', verticalalignment='center', fontsize=12, zorder=4)
+    ax.text(data.index[-1]+5, 0.25, 'Safe', rotation='vertical', verticalalignment='center', fontsize=12, zorder=12)
+    ax.text(data.index[-1]+5, 0.75, 'Risk', rotation='vertical', verticalalignment='center', fontsize=12, zorder=12)
+    ax.text(data.index[-1]+5, 0.5, '$\\tau$', verticalalignment='center', fontsize=12, zorder=12)
 
     if half != "":
         fig.text(0.0, 0.23, name, rotation='vertical', va='center', fontsize=15)
@@ -108,8 +150,28 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True):
         fig.text(0.1, 0.3, name, rotation='vertical', va='center', fontsize=15)
 
     # Plot markers for RiskFlag and SafeFlag
-    ax.scatter(data[data['RiskTrue'] == 1].index, 0.9*np.ones(data[data['RiskTrue'] == 1]['Risk'].shape), color='red', marker=2, label='True Risk Flag', zorder=3)
-    ax.scatter(data[data['SafeTrue'] == 1].index, 0.1*np.ones(data[data['SafeTrue'] == 1]['Risk'].shape), color='green', marker=3, label='True Safe Flag', zorder=3)
+    YD = 1.03
+    ax.scatter(data[data['RiskTrue'] == 1].index, YD*np.ones(data[data['RiskTrue'] == 1]['Risk'].shape), color='red', marker="*", zorder=10)
+    if len(data[data['RiskTrue'] == 1].index) > 0:
+        prev = False
+        for i in data[data['RiskTrue'] == 1].index:
+            if prev and (i - prev) > 5:
+                ax.scatter(i, YD, color='black', marker="*", zorder=12)
+                ax.scatter(prev, YD, color='black', marker="*", zorder=12)
+            prev = i
+        ax.scatter(data[data['RiskTrue'] == 1].index[0], YD, color='black', marker="*", zorder=12)
+        ax.scatter(data[data['RiskTrue'] == 1].index[-1], YD, color='black', marker="*", zorder=12)
+
+    ax.scatter(data[data['SafeTrue'] == 1].index, (1-YD)*np.ones(data[data['SafeTrue'] == 1]['Risk'].shape), color='green', marker="*", zorder=12)
+    if len(data[data['SafeTrue'] == 1].index) > 0:
+        prev = False
+        for i in data[data['SafeTrue'] == 1].index:
+            if prev and (i - prev) > 5:
+                ax.scatter(i, 1-YD, color='black', marker="*", zorder=12)
+                ax.scatter(prev, 1-YD, color='black', marker="*", zorder=12)
+            prev = i
+        ax.scatter(data[data['SafeTrue'] == 1].index[0], (1-YD), color='black', marker="*", zorder=12)
+        ax.scatter(data[data['SafeTrue'] == 1].index[-1], (1-YD), color='black', marker="*", zorder=12)
 
     # Set labels
     ax.set_xlabel('$\\alpha$')
@@ -117,14 +179,31 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True):
 
     # Set the x-axis limits
     ax.set_xlim(left=data.index[0]-5, right=data.index[-1])
-    ax.set_ylim(bottom=0, top=1)
+    ax.set_ylim(bottom=-0.06, top=1.06)
 
     # Use tight_layout to adjust the layout
     plt.subplots_adjust(left=0.2, right=0.9, top=0.9, bottom=0.1)
     # fig.tight_layout()
 
-    # Add a legend
-    ax.legend(fontsize="xx-small", loc='lower left')
+
+    handles, labels = ax.get_legend_handles_labels()
+    import matplotlib.lines as mlines
+    small_patch = mlines.Line2D([], [], color='red', linewidth=3, label='$r>0.5$ (risk!)')
+
+    handles.insert(0, small_patch)
+    labels.insert(0, '$r>0.5$ (risk!)')
+    from matplotlib.lines import Line2D
+    from matplotlib.legend_handler import HandlerTuple
+    small_patch = mpatches.Patch(color="red", label='Ground Truth', linewidth=1.0)
+    small_patch2 = mpatches.Patch(color="green", label='Ground Truth', linewidth=1.0)
+    star_marker = Line2D([0], [0], color="black", marker="*", markersize=5, linestyle="None")
+
+    handles.extend([(star_marker, small_patch, small_patch2)])
+    labels.extend(['Ground Truth'])
+
+
+    legend = ax.legend(handles, labels, fontsize="xx-small", loc='lower left', handler_map={tuple: HandlerTuple(ndivide=None)})
+    legend.set_zorder(15)
 
 
     # plt.show()
@@ -197,7 +276,8 @@ for subdir, dirs, files in os.walk(root_dir):
             # plotter(file_path, half="left")
             # plotter(file_path, half="right")
             plotter(file_path, connection_line=False, series_enabled=True)
-            plotter(file_path, connection_line=False, series_enabled=False)
+            plotter(file_path, connection_line=True, series_enabled=True)
+            # plotter(file_path, connection_line=False, series_enabled=False)
             # plotter(file_path, half="left", connection_line=False)
             # plotter(file_path, half="right", connection_line=False)
             
