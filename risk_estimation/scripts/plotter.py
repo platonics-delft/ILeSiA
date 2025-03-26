@@ -7,33 +7,27 @@ import cv2
 from pathlib import Path
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as mpatches
-
-# Put here the autogen (results forlder) for which you want to generate plots
-# e.g.
-root_dir = "/home/petr/Downloads/ilesia_25_03/autogen"
-frame_dropping = True
+from tqdm import tqdm
 
 def skill_framedropping(data, filepath):
     if "peg_pick404" in filepath:
         for i in range(len(data["RiskTrue"])):
             if not ((60 < i < 90) or (480 < i < 510)):
-                data["RiskTrue"][i] = 0.0
-                data['SafeTrue'][i] = 0.0
+                data.loc[i, "RiskTrue"] = 0.0
+                data.loc[i, 'SafeTrue'] = 0.0
     elif "peg_door404" in filepath:
         for i in range(len(data["RiskTrue"])):
             if not ((150 < i < 240) or (630 < i < 710)):
-                data["RiskTrue"][i] = 0.0
-                data['SafeTrue'][i] = 0.0 
+                data.loc[i, "RiskTrue"] = 0.0
+                data.loc[i, 'SafeTrue'] = 0.0 
     elif "peg_place404" in filepath:
         for i in range(len(data["RiskTrue"])):
             if not ((60 < i < 150) or (400 < i < 460)):
-                data["RiskTrue"][i] = 0.0
-                data['SafeTrue'][i] = 0.0 
+                data.loc[i, "RiskTrue"] = 0.0
+                data.loc[i, 'SafeTrue'] = 0.0 
     return data
 
-def plotter(filepath, half = "", connection_line=True, series_enabled=True):
-    print(filepath)
-
+def plotter(filepath, half = "", connection_line=True, series_enabled=True, training_frames_reduced=True):
     if "GP+L" in filepath:
         name = "Linear + $\mathcal{GP}$"
     elif "GP" in filepath:
@@ -47,7 +41,7 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True):
     plt.rcParams["ps.useafm"] = True
 
     data = pd.read_csv(filepath)
-    if frame_dropping:
+    if training_frames_reduced:
         data = skill_framedropping(data, filepath)
 
     if half != "":
@@ -263,22 +257,33 @@ def extract_image(filepath, frame_numbers):
 
     return frames
 
+if __name__ == "__main__":
+    # Put here the autogen (results forlder) for which you want to generate plots
+    # e.g.
+    root_dir = "/home/imitlearn/petr_sandbox/saw_ws/src/ILeSiA/risk_estimation/autogen"
+    print(root_dir)
+    training_frames_reduced = True
 
-for subdir, dirs, files in os.walk(root_dir):
-    for file in files:
-        # Check if the file is a CSV and does not include "index" in the name
-        # and does not start with "Test" or "Train"
-        if file.endswith('.csv') and 'index' not in file and 'video_list' not in file and not (file.startswith('Test') or file.startswith('Train')):
-            # Construct the full file path
-            file_path = os.path.join(subdir, file)
-            
-            # plotter(file_path)
-            # plotter(file_path, half="left")
-            # plotter(file_path, half="right")
-            plotter(file_path, connection_line=False, series_enabled=True)
-            plotter(file_path, connection_line=True, series_enabled=True)
-            # plotter(file_path, connection_line=False, series_enabled=False)
-            # plotter(file_path, half="left", connection_line=False)
-            # plotter(file_path, half="right", connection_line=False)
+    csv_files = []
+    for subdir, dirs, files in os.walk(root_dir):
+        for file in files:
+            # Check if the file is a CSV and meets the specified conditions
+            if (file.endswith('.csv') and 
+                'index' not in file and 
+                'video_list' not in file and 
+                not (file.startswith('Test') or file.startswith('Train'))):
+                csv_files.append(os.path.join(subdir, file))
+
+    pbar = tqdm(csv_files, desc="Processing files")
+    for file_path in pbar:
+        # plotter(file_path)
+        # plotter(file_path, half="left")
+        # plotter(file_path, half="right")
+        pbar.set_description(file_path.split(root_dir)[-1])
+        plotter(file_path, connection_line=False, series_enabled=True, training_frames_reduced=training_frames_reduced)
+        plotter(file_path, connection_line=True, series_enabled=True, training_frames_reduced=training_frames_reduced)
+        # plotter(file_path, connection_line=False, series_enabled=False)
+        # plotter(file_path, half="left", connection_line=False)
+        # plotter(file_path, half="right", connection_line=False)
             
 
