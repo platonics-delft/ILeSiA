@@ -1,0 +1,13 @@
+error_recovery/__pycache__/__init__.cpython-311.pyc
+*.pyc
+*.png
+*.svg
+*.csv
+*.mp4
+*.pt
+video_safety_layer.egg-info/dependency_links.txt
+video_safety_layer.egg-info/PKG-INFO
+video_safety_layer.egg-info/requires.txt
+video_safety_layer.egg-info/SOURCES.txt
+video_safety_layer.egg-info/top_level.txt
+*.avi
