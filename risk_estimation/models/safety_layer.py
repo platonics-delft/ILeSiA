@@ -36,11 +36,10 @@ class SafetyLayer:
         self,
         skill_name: str,
         latent_dim: int = 12,
-        feature_extractor=StampedDistLatentObservationsRiskLabels,
+        feature_extractor=StampedLatentObservationsRiskLabels,
         frame_dropping_policy = OnlyLabelledFramesDroppingPolicy,
         model_not_found_is_ok: bool = False,
         out_assessment: str = "cautious",
-        health_check: bool = False,
         enable_train: bool = False,
         enable_risk_estimator: bool = True,
     ):
@@ -93,45 +92,17 @@ class SafetyLayer:
 
         self.recovery_state_finder = RecoveryStateFinder()
 
-        if health_check:
-            self.health_check(skill_name)
-
         self.observations = None
         self.risk = 0.0
         self.workersem = threading.Semaphore()
         self.worker = threading.Thread(target=self.risk_estimator_thread)
         self.worker.start()
 
-
-    def health_check(self, skill_name):
-        def get_custom_dataset(videos):
-            train_dataloader_images, test_dataloader_images = RiskEstimationDataset.load(
-                video_names=videos,
-                video_embedder=self.video_embedder,
-                batch_size=self.video_embedder.batch_size,
-                frame_dropping_policy=NoFrameDroppingPolicy,
-                features=VideoObservationsRiskAndSafeLabels,
-            )
-            X_test_images, Y_test_images = RiskEstimationDataset.dataloader_to_array(test_dataloader_images)
-            X_train_images, Y_train_images = RiskEstimationDataset.dataloader_to_array(train_dataloader_images)
-            return X_train_images, X_test_images
-        X_train_images, X_test_images = get_custom_dataset([skill_name])
-        img_enc = self.video_embedder.model.forward(X_train_images).detach().cpu().numpy()
-        visualize_labelled_video(img_enc, labels={})
-
-        img_enc = self.video_embedder.model.forward(X_test_images).detach().cpu().numpy()
-        visualize_labelled_video(img_enc, labels={})
-
-
-        # visualize_labelled_video_frame(img_enc[0], risk_flag=0, safe_flag=0, novelty_flag=0, press_for_next_frame=False, printer=False)
-        
-        
-
     @check_estimator
     def sample(self, o):
         return self.risk_estimator.sample(o)
 
-    def get_sample_dataloader(self, risk=1):
+    def get_sample_dataloader(self):
         ''' Manually specify frame on which to train
         Args:
             FrameDroppingPolicy: OnlyLabelledFramesDroppingPolicyRisk{skill}{1|2}
@@ -144,14 +115,14 @@ class SafetyLayer:
             video_names=self.video_names,
             video_embedder=self.video_embedder,
             batch_size=self.video_embedder.batch_size,
-            frame_dropping_policy=eval(f"OnlyLabelledFramesDroppingPolicyRiskPegDoor{risk}"),#self.frame_dropping_policy,
+            frame_dropping_policy=eval(f"OnlyLabelledFramesDroppingPolicyRiskPegDoor"),#self.frame_dropping_policy,
             features=self.feature_extractor,
         )
         self.dataloader_images, self.test_dataloader_images = RiskEstimationDataset.load(
             video_names=self.video_names,
             video_embedder=self.video_embedder,
             batch_size=self.video_embedder.batch_size,
-            frame_dropping_policy=eval(f"OnlyLabelledFramesDroppingPolicyRiskPegDoor{risk}"),#self.frame_dropping_policy,
+            frame_dropping_policy=eval(f"OnlyLabelledFramesDroppingPolicyRiskPegDoor"),#self.frame_dropping_policy,
             features=VideoObservationsRiskAndSafeLabels,
         )
 
@@ -207,26 +178,13 @@ class SafetyLayer:
             video_embedder=self.video_embedder,
             out_assessment=self.out_assessment,
         )
-        self.risk_estimator2 = get_risk_estimator(
-            approach="deploy",
-            skill_name=self.video_embedder.name,
-            xdim=self.feature_extractor.xdim(self.video_embedder.latent_dim),
-            video_embedder=self.video_embedder,
-            out_assessment=self.out_assessment,
-        )
-        self.risk_estimator.load_model(model_special="1")
-        self.risk_estimator2.load_model(model_special="2")
+        self.risk_estimator.load_model()
 
 
     def update(self):
         """Update model on all found trial for specific skill_name
-
-        DEMO DAY UPDATE: skill trajectories are too long, some even > 700 frames
-        - Modified into two independent risk estimators
-        - This division just works
         """
-        dataloader = self.get_sample_dataloader(risk=1)
-        dataloader2 = self.get_sample_dataloader(risk=2)
+        dataloader = self.get_sample_dataloader()
         
         self.risk_estimator = get_risk_estimator(
             approach="deploy",
@@ -235,18 +193,9 @@ class SafetyLayer:
             video_embedder=self.video_embedder,
             out_assessment=self.out_assessment,
         )
-        self.risk_estimator2 = get_risk_estimator(
-            approach="deploy",
-            skill_name=self.video_embedder.name,
-            xdim=self.feature_extractor.xdim(self.video_embedder.latent_dim),
-            video_embedder=self.video_embedder,
-            out_assessment=self.out_assessment,
-        )
         
         self.risk_estimator.training_loop(dataloader)
-        self.risk_estimator2.training_loop(dataloader2)
-        self.risk_estimator.save_model(model_special="1")
-        self.risk_estimator2.save_model(model_special="2")
+        self.risk_estimator.save_model()
 
         X_test_images, Y_test_images = RiskEstimationDataset.dataloader_to_array(self.test_dataloader_images)
         # X_train_images, Y_train_images = RiskEstimationDataset.dataloader_to_array(self.dataloader_images)
@@ -341,7 +290,7 @@ def get_risk_estimator(approach, skill_name, xdim, video_embedder, out_assessmen
     if approach == "deploy":
         # return GPRiskEstimator(name=skill_name, xdim=xdim, learning_rate=0.01, arch="L+GP", out_assessment=out_assessment, train_patience=train_patience, train_epoch=train_epoch)
         # return MLPRiskEstimator(name=skill_name, xdim=xdim, train_patience=train_patience, train_epoch=500)
-        return GPRiskEstimator(
+        return TwinGPRiskEstimator(
             skill_name,
             xdim,
             learning_rate=0.01,
