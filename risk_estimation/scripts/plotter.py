@@ -57,6 +57,8 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True, trai
         else: raise Exception()
     else:
         frame_numbers = np.array(np.linspace(0, data.index[-1], 6), dtype=int)
+    # frame_numbers = [200,265,370, 590,605, 650]
+    frame_numbers = [70,108,120,465,475,500]
     data['Risk'] = data['Risk'].astype(float)
     data['Correct'] = data['Correct'].astype(int)
 

@@ -21,16 +21,6 @@ import torch
 
 import time
 
-mapping = {
-    "peg_pick404": "PegPick", 
-    "peg_door404": "PegDoor", 
-    "slider_move404": "SliderMove", 
-    "slider_move404_2": "SliderMove", # has better alignment between train and test trajectory data
-    "peg_place404": "PegPlace", 
-    "probe_pick404": "ProbePick",
-    "move_around404": "MoveAround",
-}
-
 class TimeIt():
     def __init__(self):
         self.t_prev = 0.0
@@ -83,7 +73,6 @@ def test_final_benchmarks(
     dataset_nodrop = RiskEstimationDataset.load_dataset(video_train_names, video_embedder,
         frame_dropping_policy=NoFrameDroppingPolicy, features=features)
 
-    framedrop_policy = eval(f"{OnlyLabelledFramesDroppingPolicy().__class__.__name__}Risk{mapping[skill_name]}")
     train_dataset, train_imgset, test_dataset, test_imgset = RiskEstimationDataset.extended_load(
         video_train_names, video_test_names, video_embedder, 
         framedrop_policy, features, resnet_option=resnet_type_risk_estimator
