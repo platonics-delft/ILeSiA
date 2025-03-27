@@ -20,7 +20,7 @@ ILeSiA has shown to be effective detecting different challenging risks, such as 
 ```Shell
 mkdir ~/ilesia_ws/src -p
 cd ~/ilesia_ws/src
-git clone https://github.com/platonics-delft/ILeSiA.git
+git clone https://github.com/platonics-delft/ILeSiA.git --branch dev
 git clone https://github.com/platonics-delft/franka_impedance_controller # to move the robot (needs realtime kernel installed)
 git clone https://github.com/franzesegiovanni/franka_buttons # (optional to use franka buttons)
 git clone https://github.com/platonics-delft/panda-ros-py.git
