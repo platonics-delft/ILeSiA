@@ -1,0 +1,11 @@
+[
+    {
+        "epoch": 1199,
+        "loss": 67.4270248413086,
+        "name": "peg_pick404",
+        "behaviours": null,
+        "train_names": [
+            "peg_pick404"
+        ]
+    }
+]

@@ -113,7 +113,7 @@ def plot_risk_data(data_door, data_peg):
     data_door = np.array(data_door)
     data_peg = np.array(data_peg)
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(4, 2))  # Smaller plot size
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(6, 2.5))  # Smaller plot size
 
     # Plot door data
     ax1.plot(data_door[:, 0], data_door[:, 1], marker='*', linestyle='-', linewidth=2, label='Door Risk')  
@@ -175,25 +175,23 @@ def plot_risk_polar(data_door, data_peg):
     # Adjust layout and show the plot
     plt.tight_layout()
     plt.show()
-def plot_skill_data(data_peg_pick, data_peg_place, data_peg_door):
-    skills = ['Peg Pick', 'Peg Place', 'Peg Door']
-    metrics = ['Execution Success', 'GP (No Filtering)', 'GP (Filtering)', 'MLP']
+
+def plot_skill_data(data_):
+    skills = ['Peg Pick', 'Peg Place', 'Door Open']
+    metrics = ['Execution Success', '$\mathcal{GP}$', '$\mathcal{GP}$ (Sliding window)', '$\mathcal{MLP}$']
     
-    data = np.array([data_peg_pick, data_peg_place, data_peg_door])
+    skills_data = []
+    for skill in data_:
+        skills_data.append([100*suc/all for suc, all in skill])
+    data = np.array(skills_data)
+    # data = np.array([data_peg_pick, data_peg_place, data_peg_door])
     
-    improvements = data[:, 2] - data[:, 0]
-    
-    # These are First round of results and will be changed
-    correct_values = [
-        [20, 30], [30+26, 60], [30+29, 60], [12, 100],  # Peg Pick
-        [20, 30], [23+22, 60], [26+25, 60], [14, 100],  # Peg Place
-        [18, 30], [30+27, 60], [23+30, 60], [15, 100]   # Peg Door
-    ]
+    improvements = data[:, 3] - data[:, 0]
     
     x = np.arange(len(skills))
     width = 0.2  # width of each bar
     
-    fig, ax = plt.subplots(figsize=(5, 3))
+    fig, ax = plt.subplots(figsize=(6, 3))
     
     # Plot main bars
     for i in range(len(metrics)):
@@ -201,29 +199,31 @@ def plot_skill_data(data_peg_pick, data_peg_place, data_peg_door):
         
         # Annotate bars with correct/total text
         for j, bar in enumerate(bars):
-            value = correct_values[j * 4 + i]
+            value = data_[j][i]
             ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1, 
                     f"{value[0]}/{value[1]}", ha='center', fontsize=8)
     
     # Plot improvement bars (stacked on Execution Success)
-    improvement_bars = ax.bar(x - 1.5 * width, improvements, width, bottom=data[:, 0], 
+    improvement_bars = ax.bar(x + 1.5 * width, improvements, width, bottom=data[:, 0], 
                                color='green', alpha=0.5, hatch='//', label='Improvement')
 
     # Annotate improvement bars
     for bar, imp in zip(improvement_bars, improvements):
-        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + bar.get_y() + 1, 
+        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + bar.get_y() + 5, 
                 f"+{imp:.1f}%", ha='center', fontsize=8, color='green')
 
-    ax.set_ylabel('Percentage')
+    ax.grid()
+    ax.set_ylabel('Accuracy [$\%$]')
     ax.set_xticks(x)
     ax.set_xticklabels(skills)
     ax.set_ylim(0, 100)
     
     # Legend at bottom
-    ax.legend(loc='lower center', ncol=5, bbox_to_anchor=(0.5, -0.3))
+    ax.legend(loc='lower right')
     
     plt.tight_layout()
-    plt.show()
+    # plt.show()
+    plt.savefig("skill_plot.pdf")
 
 """
 Total: 90 exectutions, 180 risks - (out of these 90 demonstrations, the 9 were used for training) 
@@ -232,24 +232,13 @@ Total: 90 exectutions, 180 risks - (out of these 90 demonstrations, the 9 were u
 
 These are First round of results and will be changed
 """
-data_peg_pick = [
-    20.      / 30 * 100, # execution successfull
-    (30.+26) / 60 * 100, # without filtering
-    (30.+29) / 60 * 100, # with filtering
-    (28.+28.)/ 60 * 100, # MLP
+skill_data = [
+    # exec.s, MLP      , GP         , GP slid.w. , MLP
+    [[20, 30], [44, 60], [57, 60], [59, 60]],  # Peg Pick
+    [[20, 30], [44, 60], [47, 60], [49, 60]],  # Peg Place
+    [[18, 30], [35, 60], [54, 60], [57, 60]],  # Peg Door
 ]
-data_peg_place = [
-    20.      / 30 * 100, # execution successfull
-    (23.+22) / 60 * 100, # without filtering
-    (26.+25) / 60 * 100, # with filtering
-    (28.+28.)/ 60 * 100, # MLP
-]
-data_peg_door = [
-    18.      / 30 * 100,
-    (30.+23) / 60 * 100,
-    (27.+30) / 60 * 100,
-    (28.+28.)/ 60 * 100, # MLP
-]
+
 
 """ Data acquired from recorded video during experiment """
 data_door = [
@@ -281,9 +270,9 @@ data_peg = [
 
 if __name__ == '__main__':
     # Call the function to generate the plots
-    # plot_risk_data(data_door, data_peg)
+    plot_risk_data(data_door, data_peg)
     # plot_risk_polar(data_door, data_peg)
-    plot_skill_data(data_peg_pick, data_peg_place, data_peg_door)
+    # plot_skill_data(skill_data)
 
     # img = get_panda_at_config(q=[0.,0.,0.,0.,0.,0.,0.])
     # print(img.shape)

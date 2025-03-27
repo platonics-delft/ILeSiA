@@ -1,0 +1,11 @@
+[
+    {
+        "epoch": 1199,
+        "loss": 151.72869873046875,
+        "name": "peg_door404",
+        "behaviours": null,
+        "train_names": [
+            "peg_door404"
+        ]
+    }
+]
