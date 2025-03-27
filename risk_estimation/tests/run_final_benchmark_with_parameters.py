@@ -12,8 +12,8 @@ mapping = {
 }
 
 skills = [
-    # "peg_pick404", 
-    "peg_door404", 
+    "peg_pick404", 
+    # "peg_door404", 
     # "slider_move404", 
     # "slider_move404_2", # has better alignment between train and test trajectory data
     # "peg_place404", 
@@ -24,10 +24,10 @@ latent_dims = [
     12
 ]
 approaches = [
-    'LR',
+    # 'LR',
     # 'MLP',
     # 'GP',
-    # 'TwinGP',
+    'TwinGP',
     # 'resnet50',
 ]
 
@@ -46,7 +46,7 @@ for latent_dim in latent_dims:
                 features="StampedLatentObservationsRiskLabels",
                 framedrop_policy=framedrop_policy,
                 out_assessment="cautious",
-                train_epoch=6000,
+                train_epoch=1000,
                 train_patience=2000,
                 save_video_flag=save_video_flag,
             )

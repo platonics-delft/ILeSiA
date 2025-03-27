@@ -260,7 +260,9 @@ def extract_image(filepath, frame_numbers):
 if __name__ == "__main__":
     # Put here the autogen (results forlder) for which you want to generate plots
     # e.g.
-    root_dir = "/home/imitlearn/petr_sandbox/saw_ws/src/ILeSiA/risk_estimation/autogen"
+    import risk_estimation
+    # root_dir = "/home/petr/ilesia_ws/src/ILeSiA/risk_estimation/autogen/quantitative_study/peg_pick404/peg_pick404_test_12"
+    root_dir = f"{risk_estimation.package_path}/risk_estimation/autogen/"
     print(root_dir)
     training_frames_reduced = True
 

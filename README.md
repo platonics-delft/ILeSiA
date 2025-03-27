@@ -20,11 +20,12 @@ ILeSiA has shown to be effective detecting different challenging risks, such as 
 ```Shell
 mkdir ~/ilesia_ws/src -p
 cd ~/ilesia_ws/src
-git clone https://github.com/platonics-delft/franka_impedance_controller # needs realtime kernel installed
+git clone https://github.com/platonics-delft/ILeSiA.git
+git clone https://github.com/platonics-delft/franka_impedance_controller # to move the robot (needs realtime kernel installed)
 git clone https://github.com/franzesegiovanni/franka_buttons # (optional to use franka buttons)
-git clone https://github.com/platonics-delft/video-safety-layer/tree/ilesia
 git clone https://github.com/platonics-delft/panda-ros-py.git
-git clone https://github.com/platonics-delft/trajectory_data --branch ra_tests
+# (opt) Download our trajectory dataset (4GB)
+git clone https://gitlab.ciirc.cvut.cz/vancpetr/trajectory_data
 cd ILeSiA
 conda install -c conda-forge mamba
 mamba env create -f environment.yml # check pytorch package version has cuda (not cpu), e.g., cuda126_mkl_py311_h01662ba_301
@@ -35,6 +36,7 @@ sudo apt install build-essential cmake python3-rospkg
 catkin build
 source ~/ilesia_ws/devel/setup.bash
 ```
+
 
 Do this in every new terminal: `conda activate ilesia; source ~/ilesia_ws/devel/setup.bash`
 
@@ -69,13 +71,19 @@ roslaunch skills_manager interactive_skill_risk_trainer.launch localize_box:=tru
 - You can label with franka buttons (or keyboard)
 - Saves the trajectory
 
-### Demo day with Robothon Box 
+### Do benchmarks
 
-Session can be downloaded from: https://drive.google.com/drive/folders/1WVcQc793BUqWMg50jX_HBbDTp3_sqpLX?usp=sharing
-Extract `demo_day_09_24_trajectories_manipulation_demo404_augment_12_session.zip` trajectories to `src/trajectory_data/trajectory/`
-Extract `demo_day_09_24_video_embedding_manipulation_demo404_augment_12_session.zip` trajectories to `src/video_safety_layer/video_embedding/saved_models/`
-Extract `demo_day_09_24_risk_models_manipulation_demo404_augment_12_session.zip` trajectories to `src/video_safety_layer/video_embedding/saved_models/`
-Uncut video: `00137.MTS`
+Read and run: `python ILeSiA/risk_estimation/tests/run_final_benchmark_with_parameters.py`
+
+Examine benchmarks in your browser (`localhost:8000`) by running `http.server`: 
+```Shell
+python3 -m http.server --directory <your_ws>/src/video_safety_layer/risk_estimation/autogen/
+```
+
+To make all plots python, run: 
+```
+python /ILeSiA/risk_estimation/scripts/plotter.py 
+```
 
 #### Usage
 
@@ -121,14 +129,7 @@ If you're not happy with the labelling, label manually
 rosrun risk_estimation label_video_manually.py --video super_skill
 ```
 
-Run risk benchmarks:
-```Shell
-rosrun risk_estimation test_final_benchmark.py
-```
-Examine benchmarks in your browser (`localhost:8000`) by running `http.server`: 
-```Shell
-python3 -m http.server --directory <your_ws>/src/video_safety_layer/risk_estimation/autogen/
-```
+
 Manual train and evaluate labelled demonstration data of given skill with:
 ```Shell
 rosrun risk_estimation train_markovian_risk_classifier.py --skill_name super_skill
@@ -146,3 +147,12 @@ python3 ood_check.py --video peg_door_trial_0 --video_test peg_door_trial_1
 
 Compares $h_{test}$ with representation one $h_{repr}$
 Out-of-distribution check for GP Risk Estimator
+
+# Old Demo session with Robothon Box
+
+Session can be downloaded from: https://drive.google.com/drive/folders/1WVcQc793BUqWMg50jX_HBbDTp3_sqpLX?usp=sharing
+
+Extract `demo_day_09_24_trajectories_manipulation_demo404_augment_12_session.zip` trajectories to `src/trajectory_data/trajectory/`
+Extract `demo_day_09_24_video_embedding_manipulation_demo404_augment_12_session.zip` trajectories to `src/video_safety_layer/video_embedding/saved_models/`
+Extract `demo_day_09_24_risk_models_manipulation_demo404_augment_12_session.zip` trajectories to `src/video_safety_layer/video_embedding/saved_models/`
+Uncut video: `00137.MTS`
