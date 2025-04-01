@@ -24,8 +24,8 @@ git clone https://github.com/platonics-delft/ILeSiA.git --branch dev
 git clone https://github.com/platonics-delft/franka_impedance_controller # to move the robot (needs realtime kernel installed)
 git clone https://github.com/franzesegiovanni/franka_buttons # (optional to use franka buttons)
 git clone https://github.com/platonics-delft/panda-ros-py.git
-# (opt) Download our trajectory dataset (4GB)
-git clone https://gitlab.ciirc.cvut.cz/vancpetr/trajectory_data
+# (opt) Download our trajectory dataset (4GB); sudo apt-get install git-lfs
+git clone https://gitlab.ciirc.cvut.cz/vancpetr/trajectory_data # cd trajectory_data; git lfs pull
 cd ILeSiA
 conda install -c conda-forge mamba
 mamba env create -f environment.yml # check pytorch package version has cuda (not cpu), e.g., cuda126_mkl_py311_h01662ba_301

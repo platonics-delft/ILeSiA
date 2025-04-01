@@ -48,7 +48,7 @@ def label_video(args):
         image = video_embedder.tensor_images[n : n + 1]
         
         img = tensor_image_to_cv2(video_embedder.tensor_images[n])
-        img = cv2.resize(img, (640, 640))
+        img = np.tile(img, (10, 10))
         cv2.putText(
             img,
             '',
@@ -113,7 +113,7 @@ def label_video(args):
 
 
         img = tensor_image_to_cv2(video_embedder.tensor_images[n])
-        img = cv2.resize(img, (640, 640))
+        img = np.tile(img, (10, 10))
         cv2.putText(img, risk_label, (0, 12), cv2.FONT_HERSHEY_SIMPLEX,
             0.5, (255, 0, 0), 1, 2)
         cv2.putText(img, recovery_phase_label, (12, 0), cv2.FONT_HERSHEY_SIMPLEX,

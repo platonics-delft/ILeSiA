@@ -175,11 +175,21 @@
     <script src="https://d3js.org/d3.v6.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            var videoPlayer = videojs('videoPlayerId');
+            var videoPlayer = videojs('videoPlayerId', {
+            controls: true,
+            controlBar: {
+                volumePanel: false, 
+                fullscreenToggle: false
+            }});
             var svg1;
             var svg2;
             var svg3;
             var svg4;
+            videoPlayer.ready(function() {
+                var videoElement = this.el().querySelector('video');
+                videoElement.style.imageRendering = 'pixelated';
+                videoElement.style.imageRendering = 'crisp-edges';
+            });
 
             document.getElementById('videoSelector').addEventListener('change', function() {
                 videoPlayer.src({ type: "video/mp4", src: this.value + ".mp4" });

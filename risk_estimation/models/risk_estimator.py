@@ -14,7 +14,9 @@ from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimatio
 from risk_estimation.models.risk_estimation.risk_feature_extractor import StampedLatentObservationsRiskLabels, LatentObservationsRiskLabels, LatentObservationsSafeLabels, FeatureExtractor, StampedDistLatentObservationsRiskLabels
 from video_embedding.models.video_embedder import VideoEmbedder
 from risk_estimation.plot_utils import plot_threshold_labelled
-from video_embedding.utils import get_session, list_files_in_folder, load, load_video, save_models_index_list, save_video, save_video_index_list
+from video_embedding.utils import get_session, load, save_models_index_list, save_video, save_video_index_list, tensor_image_to_cv2
+
+from video_embedding.image_processing import saved_img_processing
 
 from sklearn.model_selection import train_test_split
 import torch
@@ -270,22 +272,33 @@ class TwinGPRiskEstimator():
         for dataloader, model in zip(dataloaders, self.models):
             model.dataloader_nodrop_for_plot = dataloader
 
-    def sample(self, input_data):
+    def sample(self, X):
         def get_alphas_from_observations(data):
             assert len(data[0]) in [9, 10, 13, 14, 17, 18]
             return data[:,self.TIME_FEATURE_INDEX]
         
-        alphas = get_alphas_from_observations(input_data)
+        alphas = get_alphas_from_observations(X).detach().cpu().numpy()
         
-        preds = []
-        risks = []
-        stds = []
-        for alpha, x in zip(alphas, input_data):
-            # choose model
-            pred, risk, std = self.models[int(alpha * len(self.models))].sample(x)
-            preds.append(int(pred))
-            risks.append(float(risk))
-            stds.append(float(std))
+        model1_mask = alphas <= 0.5
+        model2_mask = alphas > 0.5
+        
+        X1, X2 = X[model1_mask], X[model2_mask]
+
+        if len(X1) > 0:
+            preds1, risks1, stds1 = self.models[0].sample(X1)
+        if len(X2) > 0:
+            preds2, risks2, stds2 = self.models[1].sample(X2)
+
+        # Prepare output arrays
+
+        preds, risks, stds = np.empty(len(X)), np.empty(len(X)), np.empty(len(X))
+
+        # Assign results back based on original mask
+        if len(X1) > 0:
+            preds[model1_mask], risks[model1_mask], stds[model1_mask] = preds1, risks1, stds1
+        if len(X2) > 0:
+            preds[model2_mask], risks[model2_mask], stds[model2_mask] = preds2, risks2, stds2
+
         return preds, risks, stds
     
     def encode_params_as_str(self):
@@ -328,8 +341,11 @@ class TwinGPRiskEstimator():
         for i in range(len(dataset)):
             x, y = dataset[i]  # Extract (x, y)
             
-            if x[self.TIME_FEATURE_INDEX] < 0.5:
+            if x[self.TIME_FEATURE_INDEX] < 0.4:
                 low_indices.append(i)
+            elif x[self.TIME_FEATURE_INDEX] < 0.6:
+                low_indices.append(i)
+                high_indices.append(i)
             else:
                 high_indices.append(i)
 
@@ -1087,42 +1103,30 @@ def test_interp():
 def get_image_triplet(
         video_embedder, 
         images_numpy, 
-        saliency_intensity_factor:int=1000,
-        include_saliency: bool = False, # Tested for False
         include_reconstruction_loss: bool = True, # Tested for True
         ): 
-    
-    images_new = np.zeros((len(images_numpy), 64, 64))
-    for i in range(len(images_numpy)):
-        img = cv2.resize(images_numpy[i], (64, 64))
-        # img = image_corrector.correct_image(img)
-        images_new[i] = img
-
-    images_new = images_new[:, np.newaxis, :, :]
-    images_cuda = torch.tensor(images_new, dtype=torch.float32).cuda()
+    images_cuda = torch.tensor(images_numpy, dtype=torch.float32).cuda()
     
     decoded_images = []
-    saliency_images = []
+    original_images = []
+    loss_title_images = []
     criterion = nn.MSELoss()
     cr = []
     for idx in range(len(images_numpy)):
-        latent = video_embedder.model.encoder(images_cuda[idx:idx+1])
-        decoded_img1 = video_embedder.model.decoder(latent)
-
+        original_image = tensor_image_to_cv2(images_cuda[idx:idx+1])
+        decoded_img1 = video_embedder.model.forward_batched(images_cuda[idx:idx+1])
         cr_ = criterion(decoded_img1, images_cuda[idx:idx+1])
-        decoded_img = decoded_img1.detach().cpu().numpy().squeeze().astype(np.uint8)
+
+        decoded_img = tensor_image_to_cv2(decoded_img1)
         cr.append(cr_)
 
         decoded_images.append(decoded_img)
-        # decoded_images.append(decoded_img.detach().cpu().numpy())
-        if include_saliency:
-            saliency_map = saliency_intensity_factor*get_saliency_map_for_image(video_embedder.model, decoded_img1.clone().detach()[0]).detach().cpu().numpy()
-            raise Exception("Add saliency to the images")
+
         if include_reconstruction_loss:
-            img_reconstr = np.zeros((16,64))
+            loss_title_image = np.zeros((16,64))
             cv2.putText(
-                img_reconstr, 
-                str(int(cr_)), 
+                loss_title_image, 
+                str(round(float(cr_),5)), 
                 (0, 12), 
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.5,
@@ -1130,24 +1134,30 @@ def get_image_triplet(
                 1, 
                 2
             )
-            img_reconstr = 255 - img_reconstr
+            loss_title_image = 255 - loss_title_image
 
-        saliency_images.append(img_reconstr)
+        original_images.append(original_image)
+        loss_title_images.append(loss_title_image)
     
     print("Averaged reconstruction loss: ", float(sum(cr)/len(cr)))
     
     image_triplets = []
-    for ori, dec, sal in zip(images_numpy, decoded_images, saliency_images):
+    for ori, dec, sal in zip(original_images, decoded_images, loss_title_images):
         image_triplets.append(np.vstack((ori.squeeze(), dec.squeeze(), sal.squeeze())))
 
     image_triplets = np.array(image_triplets)
 
     return image_triplets
 
-def video_triplets_save(video_name: str, video_embedder, risk_estimator, features, train_dataloader=None, folder="videos"):
-    images_ = load_video(video_name)
+def video_triplets_save(video_name: str, video_embedder, folder="videos"):
+    data = load(video_name)
+    images = data['img']
+    images_ = []
+    for img in images:
+        images_.append(saved_img_processing(img))
+    images_ = np.array(images_)
 
-    images = get_image_triplet(video_embedder, images_, saliency_intensity_factor=1000)
+    images = get_image_triplet(video_embedder, images_)
 
     video_name_without_trial = video_name.split("_trial_")[0]
     video_name_without_trial = video_name_without_trial.split("_test_")[0]
@@ -1188,14 +1198,13 @@ def sample_and_save_on_video(video_name: str, video_embedder, risk_estimator, fe
         frame_dropping_policy=NoFrameDroppingPolicy, # All frames are sampled 
         features=features
     )
-
     safe_labels = RiskEstimationDataset.load_dataset([video_name], video_embedder,    
         frame_dropping_policy=NoFrameDroppingPolicy, # All frames are sampled 
         features=LatentObservationsSafeLabels
     )
 
     pred, risks, std = risk_estimator.sample(dataset.X.squeeze())
-    
+
     correct = (pred == dataset.Y.cpu().numpy().squeeze())
     safe_labels = safe_labels.Y.cpu().numpy().squeeze()
     risk_labels = dataset.Y.cpu().numpy().squeeze()

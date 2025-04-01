@@ -27,7 +27,7 @@ def skill_framedropping(data, filepath):
                 data.loc[i, 'SafeTrue'] = 0.0 
     return data
 
-def plotter(filepath, half = "", connection_line=True, series_enabled=True, training_frames_reduced=True):
+def plotter(filepath, half = "", connection_line=True, series_enabled=True, training_frames_reduced=False, title_enabled=True):
     if "GP+L" in filepath:
         name = "Linear + $\mathcal{GP}$"
     elif "GP" in filepath:
@@ -58,7 +58,7 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True, trai
     else:
         frame_numbers = np.array(np.linspace(0, data.index[-1], 6), dtype=int)
     # frame_numbers = [200,265,370, 590,605, 650]
-    frame_numbers = [70,108,120,465,475,500]
+    # frame_numbers = [70,108,120,465,475,500]
     data['Risk'] = data['Risk'].astype(float)
     data['Correct'] = data['Correct'].astype(int)
 
@@ -201,6 +201,9 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True, trai
     legend = ax.legend(handles, labels, fontsize="xx-small", loc='lower left', handler_map={tuple: HandlerTuple(ndivide=None)})
     legend.set_zorder(15)
 
+    if title_enabled:
+        axs[0].set_title(",".join(filepath.split("/")[-1:]), fontsize=10)
+
 
     # plt.show()
     if connection_line:
@@ -263,10 +266,11 @@ if __name__ == "__main__":
     # Put here the autogen (results forlder) for which you want to generate plots
     # e.g.
     import risk_estimation
-    # root_dir = "/home/petr/ilesia_ws/src/ILeSiA/risk_estimation/autogen/quantitative_study/peg_pick404/peg_pick404_test_12"
-    root_dir = f"{risk_estimation.package_path}/risk_estimation/autogen/"
+    root_dir = f"{risk_estimation.package_path}/risk_estimation/autogen/quantitative_study"
+    # root_dir = "/home/petr/ilesia_ws/src/ILeSiA/risk_estimation/autogen/quantitative_study/peg_place404/peg_place404_test_0"
     print(root_dir)
-    training_frames_reduced = True
+    training_frames_reduced = False
+    title_enabled = True
 
     csv_files = []
     for subdir, dirs, files in os.walk(root_dir):
@@ -284,8 +288,8 @@ if __name__ == "__main__":
         # plotter(file_path, half="left")
         # plotter(file_path, half="right")
         pbar.set_description(file_path.split(root_dir)[-1])
-        plotter(file_path, connection_line=False, series_enabled=True, training_frames_reduced=training_frames_reduced)
-        plotter(file_path, connection_line=True, series_enabled=True, training_frames_reduced=training_frames_reduced)
+        # plotter(file_path, connection_line=False, series_enabled=True, training_frames_reduced=training_frames_reduced)
+        plotter(file_path, connection_line=True, series_enabled=True, training_frames_reduced=training_frames_reduced, title_enabled=title_enabled)
         # plotter(file_path, connection_line=False, series_enabled=False)
         # plotter(file_path, half="left", connection_line=False)
         # plotter(file_path, half="right", connection_line=False)

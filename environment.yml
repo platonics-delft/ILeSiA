@@ -8,6 +8,11 @@ dependencies:
 - python=3.9
 - numpy
 - ros-noetic-desktop
+- ros-noetic-controller-interface 
+- ros-noetic-franka-gripper
+- ros-noetic-franka-msgs
+- ros-noetic-franka-hw
+- ros-noetic-realtime-tools
 - pytorch
 - torchvision
 - gpytorch

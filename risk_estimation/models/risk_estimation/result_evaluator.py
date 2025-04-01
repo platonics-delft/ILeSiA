@@ -5,12 +5,12 @@ from typing import Iterable
 import pandas as pd
 from risk_estimation.models.risk_estimation.saliency_map_generator import get_saliency_map_for_image
 import numpy as np
-import torch
 from video_embedding.utils import visualize_labelled_video
 from risk_estimation.scripts.pretty_confusion_matrix import pp_matrix_from_data
-from copy import deepcopy
 import risk_estimation
 from sklearn.metrics import f1_score
+
+from video_embedding.utils import get_session
 
 class cc:
     H = '\033[95m'
@@ -22,6 +22,19 @@ class cc:
     E = '\033[0m'
     B = '\033[1m'
     U = '\033[4m'
+
+def benchmark_eval_save(
+        title,
+        skill_name,
+        dataset,
+        imgset,
+        video_embedder,
+        risk_estimator,
+    ):
+    path = f"{risk_estimation.path}/autogen/{get_session()}/{skill_name}/"
+
+    e = ResultEvaluator(name=f"{title}_{risk_estimator.encode_params_as_str()}", savepath=path, iwanttosee=["accuracy"])
+    e(risk_estimator, video_embedder, dataset.X, dataset.Y, imgset.X, imgset.Y)
 
 class ResultEvaluator():
     

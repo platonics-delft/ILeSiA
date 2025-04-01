@@ -8,7 +8,7 @@ from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 import risk_estimation
 
-
+from pathlib import Path
 
 def load(file='last'):
     import rospkg
@@ -32,23 +32,9 @@ def get_session():
     # print(f"[{__name__}] session is read ", session)
     return session
 
-def load_video(name):
-    data = load(file=name)
-    images= data['img']
-    images_new=np.zeros((len(images),64,64))
-
-    for i in range(len(images)):
-        images_new[i]=cv2.resize(images[i], (64, 64), interpolation=cv2.INTER_AREA)
-
-    # images_new = images_new[:, np.newaxis, :, :]
-
-    return images_new
-
 def tensor_image_to_cv2(image):
     ''' Returns image ready for imshow '''
-    image = image.detach().cpu().numpy().squeeze().astype(np.uint8)
-    image = cv2.resize(image, (64, 64), interpolation=cv2.INTER_AREA)
-    return image
+    return (255 * image.detach().cpu().numpy().squeeze()).astype(np.uint8)
     
 def visulize_video(img):
     import cv2
@@ -73,11 +59,12 @@ def save_video(path, name, tensor_images, h=64, w=64):
     output_file = path + name + '.mp4'
     frame_rate = 30
     
-    print(f"Saving video: {name} with {len(tensor_images)} frames and lenth {round((len(tensor_images)/30.), 1)}s.")
     writer = skvideo.io.FFmpegWriter(output_file, inputdict={'-framerate': str(frame_rate)}, outputdict={'-vcodec': 'libx264'})
     for i in range(len(tensor_images)):
         writer.writeFrame(tensor_images[i].reshape(h, w).astype(np.uint8))
     writer.close()
+    print(f"Saved video: {name} with {len(tensor_images)} frames and lenth {round((len(tensor_images)/30.), 1)}s.")
+
 
 def visualize_labelled_video(images, labels={}, press_for_next_frame=False, printer=False, h=200, w=200):
     '''
@@ -209,7 +196,11 @@ def visualize_labelled_video_frame_inline(image, risk_flag, safe_flag=0, novelty
 def number_of_saved_trials(video: str):
     import rospkg
     ros_pack = rospkg.RosPack()
-    _package_path = ros_pack.get_path('trajectory_data')
+    try:
+        _package_path = ros_pack.get_path('trajectory_data')
+    except:
+        import trajectories
+        _package_path = trajectories.package_path
 
     n = 0
     while os.path.isfile(f'{_package_path}/trajectories/{get_session()}/{video}_trial_{n}.npz'):
@@ -240,6 +231,15 @@ def number_of_saved_test_trials(video: str):
         n += 1
     
     return n
+
+def get_all_names(name_skill: str):
+    import rospkg
+    ros_pack = rospkg.RosPack()
+    _package_path = ros_pack.get_path('trajectory_data')
+
+    p = Path(f'{_package_path}/trajectories/{get_session()}/')
+    return [file.name for file in p.iterdir() if file.is_file() and file.name.startswith(name_skill)]
+
 
 def all_test_names(skills: str, include_repr: bool = False):
     if isinstance(skills, str): # skills is single skill

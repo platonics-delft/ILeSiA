@@ -1,6 +1,5 @@
 from test_final_benchmark import test_final_benchmarks
-from video_embedding.utils import all_test_names, all_trial_names, get_session, set_session
-from risk_estimation.models.risk_estimation.frame_dropping import *
+from video_embedding.utils import set_session
 
 mapping = {
     "peg_pick404": "PegPick", 
@@ -14,44 +13,38 @@ mapping = {
 
 skills = [
     # "peg_pick404", 
-    "peg_door404", 
-    # "peg_place404", 
+    # "peg_door404", 
+    "peg_place404", 
     # "slider_move404", 
     # "slider_move404_2", # has better alignment between train and test trajectory data
     # "probe_pick404"
     # "move_around404"
 ] 
-latent_dims = [
-    12
-]
+
 approaches = [
     # 'LR',
     # 'MLP',
     # 'GP',
     'TwinGP',
-    # 'resnet50',
 ]
 filter_samples_to_label_areas = False
 
-for latent_dim in latent_dims:
-    for skill_name in skills:
-        save_video_flag = True
-        for approach in approaches:
-            set_session("quantitative_study")
-            if filter_samples_to_label_areas:
-                framedrop_policy = eval(f"OnlyLabelledFramesDroppingPolicyRisk{mapping[skill_name]}")
-            else:
-                framedrop_policy = f"OnlyLabelledFramesDroppingPolicy"
-            test_final_benchmarks(
-                skill_name=skill_name,
-                video_latent_dim=latent_dim,
-                approach=approach,
-                embedding_approach="LargeAutoencoder",
-                features="StampedLatentObservationsRiskLabels",
-                framedrop_policy=framedrop_policy,
-                out_assessment="cautious",
-                train_epoch=1500,
-                train_patience=2000,
-                save_video_flag=save_video_flag,
-            )
-            save_video_flag=False
+for skill_name in skills:
+    for approach in approaches:
+        set_session("quantitative_study")
+        if filter_samples_to_label_areas:
+            framedrop_policy = f"OnlyLabelledFramesDroppingPolicyRisk{mapping[skill_name]}"
+        else:
+            framedrop_policy = f"OnlyLabelledFramesDroppingPolicy"
+        test_final_benchmarks(
+            skill_name=skill_name,
+            video_latent_dim=12,
+            approach=approach,
+            embedding_approach="Autoencoder2",
+            features="StampedLatentObservationsRiskLabels",
+            framedrop_policy=framedrop_policy,
+            out_assessment="cautious",
+            train_epoch=6000,
+            train_patience=2000,
+            save_video_flag=True,
+        )

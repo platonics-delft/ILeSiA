@@ -18,8 +18,8 @@ from risk_estimation.models.risk_estimation.frame_dropping import (
 from risk_estimation.models.risk_estimation.risk_feature_extractor import LatentObservationsRiskLabels, VideoObservationsRiskLabels, VideoObservationsRiskAndSafeLabels
 from video_embedding.models.video_embedder import VideoEmbedder
 from video_embedding.utils import load
+from video_embedding.image_processing import saved_img_processing
 
-import risk_estimation.models.risk_estimation.image_corrector as image_corrector
 
 class RiskEstimationDataset(Dataset):
     def __init__(self, X, Y, batch_size: int = 40, has_label=None, transform=None):
@@ -93,24 +93,8 @@ class RiskEstimationDataset(Dataset):
 
         images_new = np.zeros((len(images), 64, 64))
 
-        # ADD IMAGE CORRECTOR HERE
-        IMAGE_CORRECTOR_ENABLED = False
-        if IMAGE_CORRECTOR_ENABLED and image_corrector.COLOR_MATCHING:
-            # This is getting messy
-            # I need to load reference image trajectory in order to do color matching
-            name_reference = name.split("_trial_")[0] # extract 'peg_door' from 'peg_door_trial_0'
-            data_reference = load(file=name_reference)
-            images_reference = data_reference["img"]
-            images_reference_new = np.zeros((len(images_reference), 64, 64))
-            for i in range(len(images_reference_new)):
-                images_reference_new[i] = cv2.resize(images_reference[i], (64, 64))
-
         for i in range(len(images)):
-            img = cv2.resize(images[i], (64, 64), interpolation=cv2.INTER_AREA)
-            # ADD IMAGE CORRECTOR HERE
-            if IMAGE_CORRECTOR_ENABLED:
-                img = image_corrector.correct_image(img, images_reference_new[i].astype(np.uint8))
-            images_new[i] = img
+            images_new[i] = saved_img_processing(images[i])
 
         images_new = images_new[:, np.newaxis, :, :]
         # Assuming 'images' is your NumPy array of shape (num_images, h, w)

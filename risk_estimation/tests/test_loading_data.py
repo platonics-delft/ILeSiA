@@ -19,11 +19,11 @@ from video_embedding.utils import all_trial_names, set_session
 def test_loading_of_risk_aware_data_from_videos(
     frame_dropping_policy=NoFrameDroppingPolicy,
 ):
-    set_session("test_session")
-    video_names = all_trial_names('peg_door')
-    video_embedder = VideoEmbedder(latent_dim=8)
+    set_session("quantitative_study")
+    video_names = all_trial_names('peg_door404')
+    video_embedder = VideoEmbedder(latent_dim=12)
     video_embedder.load_model(
-        path=video_embedding.path + "/saved_models/", name='peg_door',
+        path=video_embedding.path + "/saved_models/", name='peg_door404',
     )
 
     print("Manual dataset load")

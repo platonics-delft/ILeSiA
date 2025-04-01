@@ -78,7 +78,64 @@ class Autoencoder(nn.Module):
                 out.append(latent_images_batch)
         return torch.cat(out, dim=0)
 
+class Autoencoder2(nn.Module):
+    def __init__(self, latent_dim: int = 12):
+        super(Autoencoder2, self).__init__()
 
+        # Encoder
+        self.encoder = nn.Sequential(
+            nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),  # Output: [64, 32, 32]
+
+            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),  # Output: [128, 16, 16]
+
+            nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),  # Output: [256, 8, 8]
+
+            nn.Flatten(),
+            nn.Linear(256 * 8 * 8, latent_dim),
+        )
+        
+        # Decoder
+        self.decoder = nn.Sequential(
+            nn.Linear(latent_dim, 256 * 8 * 8),
+            nn.Unflatten(1, (256, 8, 8)),
+
+            nn.ConvTranspose2d(256, 128, kernel_size=3, stride=2, padding=1, output_padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+
+            nn.ConvTranspose2d(128, 64, kernel_size=3, stride=2, padding=1, output_padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+
+            nn.ConvTranspose2d(64, 1, kernel_size=3, stride=2, padding=1, output_padding=1),
+            nn.Sigmoid(),  # Output pixel values in [0, 1]
+        )
+
+
+    def forward_batched(self,x):
+        ''' Only nneded when GPU low memory '''
+        dl = DataLoader(x, batch_size = 1)
+        out = []
+        with torch.no_grad():
+            for batch in dl:
+                latent_images_batch = self.encoder(batch)
+                latent_images_batch = self.decoder(latent_images_batch)
+                out.append(latent_images_batch)
+        return torch.cat(out, dim=0)
+    
+    def forward(self, x):
+        z = self.encoder(x)
+        x_reconstructed = self.decoder(z)
+        return x_reconstructed
 
 class LargeAutoencoder(nn.Module):
     def __init__(self, latent_dim=10):
@@ -257,3 +314,11 @@ class CustomResnetStage5(CustomResnetFuns, nn.Module):
         x = self.adaptive_pool(x)
         x = torch.flatten(x, 1)
         return x
+    
+
+# Example usage
+if __name__ == "__main__":
+    model = Autoencoder2()
+    dummy_input = torch.randn(10, 1, 64, 64)  # Example input (batch_size=1, channels=1, height=64, width=64)
+    reconstructed = model(dummy_input)
+    print(f"Reconstructed shape: {reconstructed.shape}")

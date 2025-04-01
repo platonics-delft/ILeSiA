@@ -10,7 +10,7 @@ from risk_estimation.models.risk_estimation.frame_dropping import *
 from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
 from risk_estimation.models.risk_estimation.risk_feature_extractor import *
 from risk_estimation.models.risk_estimator import *
-from risk_estimation.models.risk_estimation.benchmark_utils import benchmark_eval_save
+from risk_estimation.models.risk_estimation.result_evaluator import benchmark_eval_save
 from risk_estimation.models.safety_layer import get_risk_estimator_from_args
 
 import argparse
