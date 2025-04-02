@@ -238,7 +238,7 @@ def get_all_names(name_skill: str):
     _package_path = ros_pack.get_path('trajectory_data')
 
     p = Path(f'{_package_path}/trajectories/{get_session()}/')
-    return [file.name for file in p.iterdir() if file.is_file() and file.name.startswith(name_skill)]
+    return [file.name[:-4] for file in p.iterdir() if file.is_file() and file.name.startswith(name_skill)]
 
 
 def all_test_names(skills: str, include_repr: bool = False):

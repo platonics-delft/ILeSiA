@@ -46,7 +46,7 @@ class RiskEstimationDataset(Dataset):
         return len(self.X)
 
     def __getitem__(self, idx):
-        if self.transform is not None:
+        if self.transform is not None: # only for resnet
             x_pil = to_pil_image(self.X[idx])
             x_tf = self.transform(x_pil)
             x_tf = torch.tensor(256*(1-x_tf), dtype=torch.float32).cuda()

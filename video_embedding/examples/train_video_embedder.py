@@ -9,16 +9,16 @@ from video_embedding.models.nerual_networks.autoencoder import *
 def main(args):
     set_session(args.session)
     video_embedder = VideoEmbedder(
-        name=args.video[0],
-        latent_dim=int(args.latent_dim),
-        learning_rate=float(0.001),
+        name=args.video,
+        latent_dim=12,
+        learning_rate=0.001,
         batch_size=128,
         augmentation=False,
         nn_model=Autoencoder2,
     )
 
     all_videos = get_all_names(args.video)
-
+    print(f"Training on: {all_videos}")
     video_embedder.load(all_videos)
 
     video_embedder.train(num_epochs=600)
@@ -28,13 +28,11 @@ def main(args):
     video_embedder.save_model()
     # video_embedder.save_latent_trajectory()
 
-def update(args, plot: bool = False):
-    assert len(args.video) == 1, "Put update videos to --video_updates"
-    assert len(args.update_videos) > 0, "No --video_updates videos"
+def update(args):
     set_session(args.session)
 
     video_embedder = VideoEmbedder(
-        name=args.video[0],
+        name=args.video,
         latent_dim=int(args.latent_dim),
         frame_dropping=True,
         learning_rate=float(args.learning_rate),
@@ -56,15 +54,11 @@ def update(args, plot: bool = False):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        prog="Embedds video to latent space via AE",
-        description="",
-        epilog="",
-    )
+    parser = argparse.ArgumentParser()
     parser.add_argument(
         "--video",
         default="peg_pick404",
-        help="put video name or video names for video embedder to be trained on",
+        help="put skill name",
     )
     parser.add_argument(
         "--session",
@@ -72,7 +66,5 @@ if __name__ == "__main__":
     )
     
     args = parser.parse_args()
-    if args.update:
-        update(args)
-    else:
-        main(args)
+    # update(args)
+    main(args)
