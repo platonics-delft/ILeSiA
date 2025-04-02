@@ -15,12 +15,13 @@ from skills_manager.risk_aware_lfd.risk_policy import *
 from skills_manager.feedback import Feedback, RiskAwareFeedback
 
 import rospy
-import rospkg
 from std_msgs.msg import Float32
 
 import torch
 from playsound import playsound
 from threading import Thread
+
+from video_embedding.utils import get_trajectory_path
 
 class RALfD(RiskAwarePlayer, RiskAwareFeedback, LfD):
 
@@ -41,13 +42,10 @@ class RALfD(RiskAwarePlayer, RiskAwareFeedback, LfD):
         
         self.haptic_buzz_pub = rospy.Publisher("/haptic_feedback", Float32, queue_size=5)
 
-        ros_pack = rospkg.RosPack()
-        self._package_path = ros_pack.get_path('trajectory_data')
-
         self.button_press_mode = button_press_mode
 
     def skill_exists(self, name):
-        return os.path.isfile(f"{self._package_path}/trajectories/{get_session()}/{name}.npz")
+        return os.path.isfile(f"{get_trajectory_path()}/trajectories/{get_session()}/{name}.npz")
 
     def vibrate(self):
         self.haptic_buzz_pub.publish(Float32(0.5))
@@ -77,15 +75,12 @@ class RALfD(RiskAwarePlayer, RiskAwareFeedback, LfD):
         """        
         if (isinstance(file, Iterable) and not isinstance(file, str)):
             file = file[0]
-
-        ros_pack = rospkg.RosPack()
-        self._package_path = ros_pack.get_path('trajectory_data')
         
         if risk_exec_trial:
             n = number_of_saved_trials(file) # trials 0, ..., n-1 exists
 
-            pathlib.Path(f"{self._package_path}/trajectories/{get_session()}").mkdir(parents=True, exist_ok=True)
-            np.savez(f"{self._package_path}/trajectories/{get_session()}/{file}_trial_{n}.npz",
+            pathlib.Path(f"{get_trajectory_path()}/trajectories/{get_session()}").mkdir(parents=True, exist_ok=True)
+            np.savez(f"{get_trajectory_path()}/trajectories/{get_session()}/{file}_trial_{n}.npz",
                  traj=              self.exec_record['traj'],
                  ori=               self.exec_record['ori'],
                  grip=              self.exec_record['gripper'],

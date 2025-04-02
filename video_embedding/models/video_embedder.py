@@ -23,12 +23,12 @@ class VideoEmbedder(): #ElasticWeightConsolidation):
     def __init__(
         self,
         name: str,
-        latent_dim: int = 8,
+        latent_dim: int = 12,
         batch_size: int = 40,
         frame_dropping=None,
         learning_rate: float = 0.01,
         augmentation: bool = True,
-        nn_model: str = LargeAutoencoder,
+        nn_model: str = Autoencoder2,
     ):
         """Has scritly defined paths (see videos_path, models_path, latent_trajectory_path)
         Args:

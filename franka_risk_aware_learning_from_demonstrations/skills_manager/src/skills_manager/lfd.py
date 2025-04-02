@@ -18,6 +18,8 @@ from skills_manager.transfom import Transform
 from panda_ros import Panda
 from panda_ros.pose_transform_functions import position_2_array, array_quat_2_pose, list_2_quaternion
 
+from video_embedding.utils import get_trajectory_path
+
 class LfD(Panda, Feedback, Insertion, Transform, CameraFeedback):
     def __init__(self):
         rospy.init_node("learning_node")
@@ -190,9 +192,7 @@ class LfD(Panda, Feedback, Insertion, Transform, CameraFeedback):
 
 
     def save(self, file='last'):
-        ros_pack = rospkg.RosPack()
-        self._package_path = ros_pack.get_path('trajectory_data')
-        np.savez(self._package_path + '/trajectories/' + str(file) + '.npz',
+        np.savez(get_trajectory_path() + '/trajectories/' + str(file) + '.npz',
                  traj=self.recorded_traj,
                  ori=self.recorded_ori,
                  grip=self.recorded_gripper,
@@ -201,9 +201,7 @@ class LfD(Panda, Feedback, Insertion, Transform, CameraFeedback):
                  spiral_flag=self.recorded_spiral_flag)
     
     def load(self, file='last'):
-        ros_pack = rospkg.RosPack()
-        self._package_path = ros_pack.get_path('trajectory_data')
-        data = np.load(self._package_path + '/trajectories/' + str(file) + '.npz')
+        data = np.load(get_trajectory_path() + '/trajectories/' + str(file) + '.npz')
         self.recorded_traj = data['traj']
         self.recorded_ori = data['ori']
         self.recorded_gripper = data['grip']

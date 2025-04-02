@@ -8,7 +8,7 @@ from risk_estimation.models.risk_estimation.risk_feature_extractor import *
 from risk_estimation.models.risk_estimation.result_evaluator import benchmark_eval_save
 from risk_estimation.models.risk_estimation.frame_dropping import *
 from risk_estimation.models.risk_estimator import sample_and_save_on_video, video_triplets_save
-from video_embedding.models.video_embedder import VideoEmbedder, VideoEmbedder
+from video_embedding.models.video_embedder import VideoEmbedder
 from video_embedding.utils import all_test_names, all_trial_names
 
 def test_final_benchmarks(

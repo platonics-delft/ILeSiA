@@ -133,6 +133,11 @@ class StampedLatentObservationsRiskLabels(FeatureExtractor):
         video_embedder.optimizer.zero_grad()
         latent = video_embedder.model.encoder(data[0])
 
+        if False: # TEST_PLOT
+            import matplotlib.pyplot as plt
+            plt.imshow(video_embedder.model(data[0])[0,0].detach().cpu(),cmap="grey")
+            plt.show()
+
         frame_numbers = data[4] # (x, 1, 1)
 
         # frame_numbers = frame_numbers.squeeze(2) # (x, 1) 

@@ -91,17 +91,9 @@ class RiskEstimationDataset(Dataset):
         except KeyError:
             recovery_phase = -1.0 * np.ones((1,len(images)))
 
-        images_new = np.zeros((len(images), 64, 64))
+        tensor_images = saved_img_processing(images).squeeze()
+        tensor_images = tensor_images.unsqueeze(1) # (num_images, h, w) -> (num_images, 1, h, w)
 
-        for i in range(len(images)):
-            images_new[i] = saved_img_processing(images[i])
-
-        images_new = images_new[:, np.newaxis, :, :]
-        # Assuming 'images' is your NumPy array of shape (num_images, h, w)
-
-        # Convert NumPy array to a PyTorch tensor
-        tensor_images = torch.tensor(images_new, dtype=torch.float32)
-        tensor_images = tensor_images.cuda()
         risk_flag = torch.tensor(np.array([risk_flag]).T, dtype=torch.int).cuda()
         safe_flag = torch.tensor(np.array([safe_flag]).T, dtype=torch.int).cuda()
         novelty_flag = torch.tensor(np.array([novelty_flag]).T, dtype=torch.int).cuda()
@@ -131,6 +123,7 @@ class RiskEstimationDataset(Dataset):
             Iterable[Dataloader]: Dataloader for each video name
         """
         dataloaders = []
+        print(f"Loading dataloader from skills: {names}")
         for name in names:
             dataset = TensorDataset(
                 *frame_dropping_policy.filter_frames(cls.load_video_data(name))
@@ -192,15 +185,20 @@ class RiskEstimationDataset(Dataset):
                                    Y, e.g. 10 * 40 labels
         """        
         X, Y = [], []
+
         dataloaders = cls.load_videos_data_dataloaders(
             video_names, batch_size, frame_dropping_policy
         )
+
+
         for dataloader,video_name in zip(dataloaders, video_names):
             for datasample in dataloader:
                 x, y = features.extract(datasample, video_embedder, video_name)
 
                 X.append(x.cpu().detach().numpy())
                 Y.append(y.cpu().detach().numpy())
+
+
 
         if len(X) == 0:
             return RiskEstimationDataset([], [])

@@ -8,12 +8,10 @@ import numpy as np
 # skill_manager Python package needs to be installed correctly, then:
 # from skills_manager.scripts.feedback import Feedback
 from skills_manager.feedback import RiskAwareFeedback
-import rospkg
+from video_embedding.utils import get_trajectory_path
 
 def save(self, file='last'):
-    ros_pack = rospkg.RosPack()
-    _package_path = ros_pack.get_path('trajectory_data')
-    np.savez(f"{_package_path}/trajectories/{get_session()}/{file}.npz",
+    np.savez(f"{get_trajectory_path()}/trajectories/{get_session()}/{file}.npz",
                 traj=self['traj'],
                 ori=self['ori'],
                 grip=self['grip'],

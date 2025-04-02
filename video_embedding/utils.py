@@ -11,10 +11,7 @@ import risk_estimation
 from pathlib import Path
 
 def load(file='last'):
-    import rospkg
-    ros_pack = rospkg.RosPack()
-    _package_path = ros_pack.get_path('trajectory_data')
-    data = np.load(f"{_package_path}/trajectories/{get_session()}/{file}.npz")
+    data = np.load(f"{get_trajectory_path()}/trajectories/{get_session()}/{file}.npz")
     return data
 
 def set_session(name):
@@ -194,16 +191,10 @@ def visualize_labelled_video_frame_inline(image, risk_flag, safe_flag=0, novelty
 
 
 def number_of_saved_trials(video: str):
-    import rospkg
-    ros_pack = rospkg.RosPack()
-    try:
-        _package_path = ros_pack.get_path('trajectory_data')
-    except:
-        import trajectories
-        _package_path = trajectories.package_path
+
 
     n = 0
-    while os.path.isfile(f'{_package_path}/trajectories/{get_session()}/{video}_trial_{n}.npz'):
+    while os.path.isfile(f'{get_trajectory_path()}/trajectories/{get_session()}/{video}_trial_{n}.npz'):
         n += 1
     
     return n
@@ -222,22 +213,26 @@ def all_trial_names(skills: str, include_repr: bool = True):
     return names
 
 def number_of_saved_test_trials(video: str):
-    import rospkg
-    ros_pack = rospkg.RosPack()
-    _package_path = ros_pack.get_path('trajectory_data')
 
     n = 0
-    while os.path.isfile(f'{_package_path}/trajectories/{get_session()}/{video}_test_{n}.npz'):
+    while os.path.isfile(f'{get_trajectory_path()}/trajectories/{get_session()}/{video}_test_{n}.npz'):
         n += 1
     
     return n
 
-def get_all_names(name_skill: str):
-    import rospkg
-    ros_pack = rospkg.RosPack()
-    _package_path = ros_pack.get_path('trajectory_data')
+def get_trajectory_path():
+    return trajectory_data_path
+import rospkg
+ros_pack = rospkg.RosPack()
+try:
+    trajectory_data_path = ros_pack.get_path('trajectory_data')
+except:
+    import trajectories
+    trajectory_data_path = trajectories.package_path
 
-    p = Path(f'{_package_path}/trajectories/{get_session()}/')
+
+def get_all_names(name_skill: str):
+    p = Path(f'{get_trajectory_path()}/trajectories/{get_session()}/')
     return [file.name[:-4] for file in p.iterdir() if file.is_file() and file.name.startswith(name_skill)]
 
 

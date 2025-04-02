@@ -1,8 +1,6 @@
 from copy import deepcopy
 import os
 import numpy as np
-import rospkg
-import risk_estimation
 from risk_estimation.models.risk_estimation.frame_dropping import ProactiveRiskLabelingDroppingPolicy, OnlyLabelledFramesDroppingPolicy
 from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
 from risk_estimation.models.risk_estimation.risk_feature_extractor import StampedLatentObservationsRiskLabels
