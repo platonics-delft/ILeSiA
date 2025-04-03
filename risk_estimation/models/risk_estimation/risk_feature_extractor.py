@@ -141,7 +141,8 @@ class StampedLatentObservationsRiskLabels(FeatureExtractor):
         frame_numbers = data[4] # (x, 1, 1)
 
         # frame_numbers = frame_numbers.squeeze(2) # (x, 1) 
-        X = torch.cat((latent, frame_numbers), axis=1)
+        # data is in range -300 to 300 -> scaling to make it 0-1
+        X = torch.cat((0.0015 * latent + 0.5, frame_numbers), axis=1)
         Y = cls.RiskLabels(data)
         return X, Y
     

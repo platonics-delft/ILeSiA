@@ -305,6 +305,8 @@ def get_risk_estimator(approach, skill_name, xdim, video_embedder, out_assessmen
     # Multilayer perceptron
     elif approach == 'MLP':
         return MLPRiskEstimator(name=skill_name, xdim=xdim, train_patience=train_patience, train_epoch=train_epoch)
+    elif approach == "MLP2":
+        return MLPRiskEstimator2(name=skill_name, xdim=xdim, train_patience=train_patience, train_epoch=train_epoch)
     # Gaussian processes models
     elif approach == 'GP':
         return GPRiskEstimator(name=skill_name, xdim=xdim, learning_rate=0.01, 

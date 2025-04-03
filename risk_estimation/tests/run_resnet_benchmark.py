@@ -1,6 +1,6 @@
 
 from video_embedding.utils import set_session
-from test_final_benchmark import test_final_benchmarks
+from risk_estimation.examples.run_final_benchmark import run_final_benchmarks
 
 skills =[
     # "peg_pick404", 
@@ -28,7 +28,7 @@ for skill_name in skills:
             features = eval(features)
 
         print("save_video_flag ", save_video_flag)
-        test_final_benchmarks(
+        run_final_benchmarks(
             skill_name = skill_name,
             video_latent_dim = video_latent_dim,
             approach = 'resnet50',

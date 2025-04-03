@@ -26,17 +26,11 @@ def test_risk_flag_extremes():
 
 def prepare(skill_name):
     # 1. Video embedder encodes skill from video
-    video_embedder = VideoEmbedder(latent_dim=8)
-    video_embedder.load_model(
-        path=video_embedding.path + "/saved_models/", name=skill_name,
-    )
+    video_embedder = VideoEmbedder(skill_name, latent_dim=12)
+    video_embedder.load_model()
 
     # 2. Risk estimator with hyper params
-    risk_estimator = MLPRiskEstimator(
-        skill_name,
-        9,
-        video_embedder.batch_size,
-    )
+    risk_estimator = MLPRiskEstimator(skill_name, 13, video_embedder.batch_size)
     return video_embedder, risk_estimator
 
 def data_aggregation(skill_name, video_names, plotter=False):
@@ -65,11 +59,8 @@ def data_aggregation(skill_name, video_names, plotter=False):
             frame_dropping_policy=OnlyLabelledFramesDroppingPolicy,
             features=StampedLatentObservationsRiskLabels,
         )
-        risk_estimator.training_loop(
-            train_dl, num_epochs=1500, patience=1000, epoch_print=200
-        )  # Train Risk Aware module
-        X, Y = RiskEstimationDataset.dataloader_to_array(
-            train_dl)
+        risk_estimator.training_loop(train_dl)
+        X, Y = RiskEstimationDataset.dataloader_to_array(train_dl)
         print(X.shape)
         print(Y.shape)
 
@@ -79,14 +70,14 @@ def data_aggregation(skill_name, video_names, plotter=False):
         print("Safe samples: ", len(Y[Y==0]))
 
         
-        pred, _ = risk_estimator.sample(X)
+        pred, _, _ = risk_estimator.sample(X)
         print(f"Accuracy on train data: {100 * (Y == pred).mean()}%")
         
         X, Y = RiskEstimationDataset.dataloader_to_array(
             all_trials_test_dataloader)
 
         Y = Y.cpu().numpy().squeeze()
-        pred, _ = risk_estimator.sample(X)
+        pred, _, _ = risk_estimator.sample(X)
         print(f"Accuracy on all test data: {100 * (Y == pred).mean()}%")
     
     if plotter:
@@ -101,8 +92,8 @@ def main_data_aggregation(skill_name = "peg_place"):
     data_aggregation(skill_name, video_names)
 
 
-def test_data_aggregation(skill_name = "peg_door"):
-    set_session("test_session")
+def test_data_aggregation(skill_name = "peg_door404"):
+    set_session("quantitative_study")
     n = number_of_saved_trials(skill_name)
     video_names = [f"{skill_name}_trial_{i}" for i in range(n)]
 

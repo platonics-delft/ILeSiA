@@ -11,7 +11,7 @@ from risk_estimation.models.risk_estimator import sample_and_save_on_video, vide
 from video_embedding.models.video_embedder import VideoEmbedder
 from video_embedding.utils import all_test_names, all_trial_names
 
-def test_final_benchmarks(
+def run_final_benchmarks(
         skill_name: str,
         video_latent_dim: int,
         approach: str,
