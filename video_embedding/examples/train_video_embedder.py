@@ -13,18 +13,17 @@ def main(args):
         latent_dim=12,
         learning_rate=0.001,
         batch_size=128,
-        nn_model=Autoencoder2,
+        nn_model=eval(args.nn_model),
     )
 
     all_videos = get_all_names(args.video)
     print(f"Training on: {all_videos}")
     video_embedder.load(all_videos)
 
-    video_embedder.train(num_epochs=600)
-    # video_embedder.train(num_epochs=args.epoch, patience=args.patience)
+    video_embedder.train(num_epochs=args.num_epochs)
 
-    # video_embedder.create_video()
     video_embedder.save_model()
+    video_embedder.create_video()
     # video_embedder.save_latent_trajectory()
 
 def update(args):
@@ -62,6 +61,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "--session",
         default="quantitative_study",
+    )
+    parser.add_argument(
+        "--num_epochs",
+        default=100,
+        type=int,
+    )
+    parser.add_argument(
+        "--nn_model",
+        default="Autoencoder2",
     )
     
     args = parser.parse_args()

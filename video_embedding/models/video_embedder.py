@@ -217,21 +217,21 @@ class VideoEmbedder(): #ElasticWeightConsolidation):
             parents=True, exist_ok=True
         )  # create dir if not exists
         with open(
-            f"{self.models_path}/{self.name}_model_{self.latent_dim}.json", "w"
+            f"{self.models_path}/{self.name}_{self.model.__class__.__name__}_{self.latent_dim}.json", "w"
         ) as f:  # save config
             json.dump(self.model_train_record, f, indent=4)
         torch.save(
             self.model.state_dict(),
-            f"{self.models_path}/{self.name}_model_{self.latent_dim}.pt",
+            f"{self.models_path}/{self.name}_{self.model.__class__.__name__}_{self.latent_dim}.pt",
         )  # save model
 
     def load_model(self):
         print(
-            f"Loading model: {self.models_path}/{self.name}_model_{self.latent_dim}.pt"
+            f"Loading model: {self.models_path}/{self.name}_{self.model.__class__.__name__}_{self.latent_dim}.pt"
         )
 
         state_dict = torch.load(
-            f"{self.models_path}/{self.name}_model_{self.latent_dim}.pt"
+            f"{self.models_path}/{self.name}_{self.model.__class__.__name__}_{self.latent_dim}.pt"
         )
 
         # fisher and old params are saves as registered_buffer and not loaded as load_state_dict
@@ -245,7 +245,7 @@ class VideoEmbedder(): #ElasticWeightConsolidation):
         self.model.eval()
 
         with open(
-            f"{self.models_path}/{self.name}_model_{self.latent_dim}.json", "r"
+            f"{self.models_path}/{self.name}_{self.model.__class__.__name__}_{self.latent_dim}.json", "r"
         ) as f:
             model_train_record = json.load(f)
             if isinstance(model_train_record, dict):
