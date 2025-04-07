@@ -13,7 +13,6 @@ def main(args):
         latent_dim=12,
         learning_rate=0.001,
         batch_size=128,
-        augmentation=False,
         nn_model=Autoencoder2,
     )
 

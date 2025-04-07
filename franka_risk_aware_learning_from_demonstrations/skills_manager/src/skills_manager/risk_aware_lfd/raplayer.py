@@ -3,7 +3,7 @@
 
 
 import time
-from risk_estimation.models.risk_estimator import sample_and_save_on_video
+from risk_estimation.scripts.result_img_save import sample_and_save_on_video
 import numpy as np
 from risk_estimation.models.safety_layer import SafetyLayer
 from video_embedding.utils import visualize_labelled_video_frame

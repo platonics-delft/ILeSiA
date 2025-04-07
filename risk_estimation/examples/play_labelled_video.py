@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-from risk_estimation.models.risk_estimation.frame_dropping import NoFrameDroppingPolicy
-from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
+from risk_estimation.datasets.frame_dropping import NoFrameDroppingPolicy
+from risk_estimation.datasets.risk_dataloader import RiskEstimationDataset
 from risk_estimation.models.safety_layer import SafetyLayer
 import torch
 from video_embedding.utils import set_session, load, visualize_labelled_video

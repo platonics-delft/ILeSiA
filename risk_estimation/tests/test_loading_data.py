@@ -1,23 +1,11 @@
-import numpy as np
-import risk_estimation
-from risk_estimation.models.risk_estimation.frame_dropping import (
-    NoFrameDroppingPolicy,
-    ProactiveRiskLabelingDroppingPolicy,
-    OnlyLabelledFramesDroppingPolicy,
-)
-from risk_estimation.models.risk_estimation.risk_dataloader import (
-    RiskEstimationDataset,
-)
-
-from risk_estimation.models.risk_estimation.risk_feature_extractor import LatentObservationsRiskLabels, StampedDistLatentObservationsRiskLabels, StampedLatentObservationsRiskLabels, VideoObservationsRiskLabels
-from risk_estimation.models.risk_estimator import MLPRiskEstimator
-import video_embedding
+from risk_estimation.datasets.frame_dropping import *
+from risk_estimation.datasets.risk_dataloader import RiskEstimationDataset
+from risk_estimation.datasets.risk_feature_extractor import *
+from risk_estimation.models.safety_layer import get_risk_estimator
 from video_embedding.models.video_embedder import VideoEmbedder
 from video_embedding.utils import all_trial_names, all_test_names, set_session
 
 from torch.utils.data import DataLoader
-from risk_estimation.models.safety_layer import get_risk_estimator
-
 
 def test_loading(
         skill_name='peg_door404',

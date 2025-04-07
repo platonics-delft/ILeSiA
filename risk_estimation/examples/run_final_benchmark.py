@@ -2,12 +2,12 @@
 
 from torch.utils.data import DataLoader
 from risk_estimation.models.safety_layer import get_risk_estimator
-from risk_estimation.models.risk_estimation.frame_dropping import NoFrameDroppingPolicy, OnlyLabelledFramesDroppingPolicy
-from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
-from risk_estimation.models.risk_estimation.risk_feature_extractor import *
-from risk_estimation.models.risk_estimation.result_evaluator import benchmark_eval_save
-from risk_estimation.models.risk_estimation.frame_dropping import *
-from risk_estimation.models.risk_estimator import sample_and_save_on_video, video_triplets_save
+from risk_estimation.datasets.frame_dropping import NoFrameDroppingPolicy
+from risk_estimation.datasets.risk_dataloader import RiskEstimationDataset
+from risk_estimation.datasets.risk_feature_extractor import *
+from risk_estimation.datasets.frame_dropping import *
+from risk_estimation.result_evaluator import benchmark_eval_save
+from risk_estimation.scripts.result_img_save import sample_and_save_on_video, video_triplets_save
 from video_embedding.models.video_embedder import VideoEmbedder
 from video_embedding.utils import all_test_names, all_trial_names
 

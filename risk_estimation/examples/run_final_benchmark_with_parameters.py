@@ -1,4 +1,4 @@
-from test_final_benchmark import test_final_benchmarks
+from risk_estimation.examples.run_final_benchmark import run_final_benchmarks
 from video_embedding.utils import set_session
 
 mapping = {
@@ -12,9 +12,9 @@ mapping = {
 }
 
 skills = [
-    # "peg_pick404", 
+    "peg_pick404", 
     # "peg_door404", 
-    "peg_place404", 
+    # "peg_place404", 
     # "slider_move404", 
     # "slider_move404_2", # has better alignment between train and test trajectory data
     # "probe_pick404"
@@ -24,6 +24,7 @@ skills = [
 approaches = [
     # 'LR',
     # 'MLP',
+    # 'MLP2',
     # 'GP',
     'TwinGP',
 ]
@@ -36,7 +37,8 @@ for skill_name in skills:
             framedrop_policy = f"OnlyLabelledFramesDroppingPolicyRisk{mapping[skill_name]}"
         else:
             framedrop_policy = f"OnlyLabelledFramesDroppingPolicy"
-        test_final_benchmarks(
+        # framedrop_policy = f"NoFrameDroppingPolicy"
+        run_final_benchmarks(
             skill_name=skill_name,
             video_latent_dim=12,
             approach=approach,
@@ -44,7 +46,7 @@ for skill_name in skills:
             features="StampedLatentObservationsRiskLabels",
             framedrop_policy=framedrop_policy,
             out_assessment="cautious",
-            train_epoch=6000,
-            train_patience=2000,
+            train_epoch=3000,
+            train_patience=6000,
             save_video_flag=True,
         )

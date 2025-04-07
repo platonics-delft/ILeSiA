@@ -1,16 +1,15 @@
 from copy import deepcopy
 import threading
-from error_recovery.models.recovery_state_finder import RecoveryStateFinder
 import numpy as np
-from torch.utils.data import DataLoader
-from typing import Iterable
 
-import video_embedding, risk_estimation
-from risk_estimation.models.risk_estimation.result_evaluator import ResultEvaluator
-from risk_estimation.models.risk_estimation.risk_feature_extractor import *
-from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
-from risk_estimation.models.risk_estimation.frame_dropping import *
-from risk_estimation.models.risk_estimator import MLPRiskEstimator, GPRiskEstimator
+from risk_estimation.result_evaluator import ResultEvaluator
+from risk_estimation.datasets.risk_feature_extractor import *
+from risk_estimation.datasets.risk_dataloader import RiskEstimationDataset
+from risk_estimation.datasets.frame_dropping import *
+from risk_estimation.models.mlp_risk_estimator import MLPRiskEstimator, MLPRiskEstimator2
+from risk_estimation.models.gp_risk_estimator import GPRiskEstimator, TwinGPRiskEstimator
+from risk_estimation.models.dist_risk_estimator import *
+from risk_estimation.models.resnet_risk_estimator import ResNetRiskEstimator
 from video_embedding.utils import all_trial_names, visualize_labelled_video, visualize_labelled_video_frame, get_session
 from video_embedding.models.video_embedder import VideoEmbedder
 
@@ -68,7 +67,7 @@ class SafetyLayer:
             else:
                 raise Exception("Not found")
 
-        self.video_embedder = VideoEmbedder(name=skill_name, latent_dim=latent_dim, nn_model=LargeAutoencoder)
+        self.video_embedder = VideoEmbedder(name=skill_name, latent_dim=latent_dim, nn_model=Autoencoder2)
         if not enable_risk_estimator:
             self.video_embedder = None
             return
@@ -89,8 +88,6 @@ class SafetyLayer:
             self.update()
         else:
             self.load()
-
-        self.recovery_state_finder = RecoveryStateFinder()
 
         self.observations = None
         self.risk = 0.0

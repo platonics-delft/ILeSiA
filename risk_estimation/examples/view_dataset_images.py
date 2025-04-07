@@ -1,13 +1,10 @@
-import cv2
-import risk_estimation
-from risk_estimation.models.risk_estimation.frame_dropping import NoFrameDroppingPolicy, OnlyLabelledFramesDroppingPolicy
-from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
-from risk_estimation.models.risk_estimation.risk_feature_extractor import LatentObservationsRiskLabels, VideoObservationsRiskAndSafeLabels
-import video_embedding
+
+from risk_estimation.datasets.frame_dropping import *
+from risk_estimation.datasets.risk_dataloader import RiskEstimationDataset
+from risk_estimation.datasets.risk_feature_extractor import *
 from video_embedding.models.video_embedder import VideoEmbedder
 from video_embedding.utils import all_trial_names, clip_samples, number_of_saved_trials, set_session, tensor_image_to_cv2, visulize_video, load, visualize_labelled_video
 import argparse
-import numpy as np
 
 # skill_manager Python package needs to be installed correctly, then:
 from skills_manager.feedback import RiskAwareFeedback

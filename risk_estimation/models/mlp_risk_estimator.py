@@ -1,8 +1,7 @@
 
 from risk_estimation.models.risk_estimator import RiskEstimatorBase
-from risk_estimation.models.risk_classifier import BinaryClassifier, LRRiskClassifier, RiskClassifierA4
+from risk_estimation.models.mlp_risk_estimator import *
 from risk_estimation.models.gp_risk_estimator import GPEarlyStoppingAndPlot
-import risk_estimation
 
 import torch
 import torch.nn as nn
@@ -126,6 +125,16 @@ class MLPRiskEstimator(RiskEstimatorBase):
 
         self.patience = train_patience
         self.train_epoch = train_epoch
+
+    def sample(self, 
+               X: torch.Tensor # 1D or 2D tensor
+               ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        if X.ndim == 1:
+            X = X[None, X]
+        assert X.ndim == 2
+
+        risk = self.model.forward(X).cpu().detach().numpy().ravel()
+        return self.risk_to_decision(risk), risk, np.zeros(len(risk))
 
     def get_classifier_arcitecture(self, xdim, arch):
         if arch == 'LR':

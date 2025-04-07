@@ -4,7 +4,7 @@ from typing import Iterable, Tuple
 import cv2, os
 import numpy as np
 import risk_estimation
-from risk_estimation.models.risk_estimator import sample_and_save_on_video
+from risk_estimation.scripts.result_img_save import sample_and_save_on_video
 
 from video_embedding.utils import get_session, number_of_saved_trials
 

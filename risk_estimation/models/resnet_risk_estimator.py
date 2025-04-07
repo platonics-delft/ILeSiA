@@ -1,6 +1,6 @@
 
 from risk_estimation.models.risk_estimator import RiskEstimatorBase
-from risk_estimation.models.risk_dataloader import RiskEstimationDataset
+from risk_estimation.datasets.risk_dataloader import RiskEstimationDataset
 import torch
 import torch.optim as optim
 import torchvision

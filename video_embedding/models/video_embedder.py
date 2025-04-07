@@ -27,7 +27,6 @@ class VideoEmbedder(): #ElasticWeightConsolidation):
         batch_size: int = 40,
         frame_dropping=None,
         learning_rate: float = 0.01,
-        augmentation: bool = True,
         nn_model: str = Autoencoder2,
     ):
         """Has scritly defined paths (see videos_path, models_path, latent_trajectory_path)
@@ -35,15 +34,13 @@ class VideoEmbedder(): #ElasticWeightConsolidation):
             name (str): Skill and model name
             latent_dim (int, optional): Defaults to 8.
             batch_size (int, optional): Defaults to 40.
-            augmentation (bool, optional): Apply affine, perspective, brightness, contrast transformations
         """
         super(VideoEmbedder, self).__init__()
         self.name = name  # skill name
         self.model_train_record = []
 
         self.frame_dropping = frame_dropping
-        self.augmentation = augmentation
-
+        
         if isinstance(nn_model, str):
             nn_model = eval(nn_model)
         self.model = nn_model(latent_dim)
@@ -57,8 +54,6 @@ class VideoEmbedder(): #ElasticWeightConsolidation):
 
         # Define batch size
         self.batch_size = batch_size  # Adjust the batch size as needed
-        if not hasattr(self, "augmentation"):
-            self.augmentation = False
 
     @property
     def videos_path(self):
@@ -122,10 +117,8 @@ class VideoEmbedder(): #ElasticWeightConsolidation):
         try:
             for epoch in pviz:
                 for data in self.dataloader:
-                    if self.augmentation:
-                        input_batch = data.flatten(-1)
-                    else:
-                        input_batch = data[0]
+                    input_batch = data[0]
+                    # input_batch = data.flatten(-1)
                     self.optimizer.zero_grad()
                     output = self.model(input_batch)
 

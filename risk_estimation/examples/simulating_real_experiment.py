@@ -2,11 +2,10 @@
 """
 
 import argparse
-import risk_estimation
 from risk_estimation.examples.train_markovian_risk_classifier import get_risk_estimator
-from risk_estimation.models.risk_estimation.frame_dropping import ProactiveRiskLabelingDroppingPolicy, OnlyLabelledFramesDroppingPolicy, NoFrameDroppingPolicy
-from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
-from risk_estimation.models.risk_estimation.risk_feature_extractor import VideoObservationsRiskAndSafeLabels, StampedLatentObservationsRiskLabels, LatentObservationsRiskLabels, StampedDistLatentObservationsRiskLabels
+from risk_estimation.datasets.frame_dropping import *
+from risk_estimation.datasets.risk_dataloader import RiskEstimationDataset
+from risk_estimation.datasets.risk_feature_extractor import *
 from video_embedding.models.video_embedder import VideoEmbedder
 from video_embedding.utils import all_trial_names, set_session, visualize_labelled_video
 from risk_estimation.scripts.pretty_confusion_matrix import pp_matrix_from_data

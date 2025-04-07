@@ -3,7 +3,7 @@
 import pathlib
 from typing import Iterable
 import pandas as pd
-from risk_estimation.models.risk_estimation.saliency_map_generator import get_saliency_map_for_image
+from risk_estimation.models.utils.saliency_map_generator import get_saliency_map_for_image
 import numpy as np
 from video_embedding.utils import visualize_labelled_video
 from risk_estimation.scripts.pretty_confusion_matrix import pp_matrix_from_data

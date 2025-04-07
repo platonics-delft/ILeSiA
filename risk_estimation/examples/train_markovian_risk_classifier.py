@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
-import json
-from models.risk_estimation.result_evaluator import ResultEvaluator
-import risk_estimation
-from risk_estimation.plot_utils import plot_threshold_labelled
-import video_embedding
-from video_embedding.utils import all_trial_names, all_test_names, set_session, tensor_image_to_cv2, visualize_labelled_video
+from risk_estimation.result_evaluator import ResultEvaluator
+from video_embedding.utils import all_trial_names, all_test_names, set_session
 from video_embedding.models.video_embedder import VideoEmbedder, VideoEmbedder
-from risk_estimation.models.risk_estimation.frame_dropping import *
-from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
-from risk_estimation.models.risk_estimation.risk_feature_extractor import *
+from risk_estimation.datasets.frame_dropping import *
+from risk_estimation.datasets.risk_dataloader import RiskEstimationDataset
+from risk_estimation.datasets.risk_feature_extractor import *
 from risk_estimation.models.risk_estimator import *
-from risk_estimation.models.risk_estimation.result_evaluator import benchmark_eval_save
+from risk_estimation.result_evaluator import benchmark_eval_save
 from risk_estimation.models.safety_layer import get_risk_estimator_from_args
+from risk_estimation.scripts.result_img_save import sample_and_save_on_video
 
 import argparse
 

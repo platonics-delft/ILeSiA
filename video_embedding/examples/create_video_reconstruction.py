@@ -26,7 +26,6 @@ video_embedder = VideoEmbedder(
         latent_dim=int(12),
         learning_rate=float(0.001),
         batch_size=120,
-        augmentation=False,
         nn_model="Autoencoder2",
     )
 

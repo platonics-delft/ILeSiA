@@ -3,8 +3,12 @@ import torch
 
 from risk_estimation.models.risk_estimator import RiskEstimatorBase
 import pathlib
-from risk_estimation.models.risk_estimation.risk_dataloader import RiskEstimationDataset
+from risk_estimation.datasets.risk_dataloader import RiskEstimationDataset
 from tqdm import tqdm
+from video_embedding.utils import get_session
+import risk_estimation
+import numpy as np
+from torch.utils.data import DataLoader, Subset
 
 # We will use the simplest form of GP model, exact inference
 class GPModel(gpytorch.models.ExactGP):
@@ -178,6 +182,131 @@ class GPRiskEstimator(RiskEstimatorBase):
         self.model.train()
         self.likelihood.train()
         return pred, risk, std
+
+
+class TwinGPRiskEstimator():
+    APPROACH = "TwinGP"
+    TIME_FEATURE_INDEX = -1 # the last feature is time
+
+    def __init__(self, *args, **kwargs):
+        self.models = [
+            GPRiskEstimator(*args, **kwargs),
+            GPRiskEstimator(*args, **kwargs),
+        ]
+
+    @property
+    def dataloader_test_for_plot(self):
+        return self.models[0].dataloader_test_for_plot
+    
+    @dataloader_test_for_plot.setter
+    def dataloader_test_for_plot(self, dataloader):
+        dataloaders = self.split_dataloader_to_models(dataloader)
+        for dataloader, model in zip(dataloaders, self.models):
+            model.dataloader_test_for_plot = dataloader
+
+    @property
+    def dataloader_nodrop_for_plot(self):
+        return self.models[0].dataloader_nodrop_for_plot
+
+    @dataloader_nodrop_for_plot.setter
+    def dataloader_nodrop_for_plot(self, dataloader):
+        dataloaders = self.split_dataloader_to_models(dataloader)
+        for dataloader, model in zip(dataloaders, self.models):
+            model.dataloader_nodrop_for_plot = dataloader
+
+    def sample(self, 
+               X: torch.Tensor, # 1D or 2D tensor
+               ) -> tuple[np.ndarray, np.ndarray, np.ndarray]: # 1D, 1D, 1D
+
+        def get_alphas_from_observations(data):
+            assert len(data[0]) in [9, 10, 13, 14, 17, 18]
+            return data[:,self.TIME_FEATURE_INDEX]
+        
+        alphas = get_alphas_from_observations(X).detach().cpu().numpy()
+        
+        model1_mask = alphas <= 0.5
+        model2_mask = alphas > 0.5
+        
+        X1, X2 = X[model1_mask], X[model2_mask]
+
+        if len(X1) > 0:
+            preds1, risks1, stds1 = self.models[0].sample(X1)
+        if len(X2) > 0:
+            preds2, risks2, stds2 = self.models[1].sample(X2)
+
+        # Prepare output arrays
+
+        preds, risks, stds = np.empty(len(X)), np.empty(len(X)), np.empty(len(X))
+
+        # Assign results back based on original mask
+        if len(X1) > 0:
+            preds[model1_mask], risks[model1_mask], stds[model1_mask] = preds1, risks1, stds1
+        if len(X2) > 0:
+            preds[model2_mask], risks[model2_mask], stds[model2_mask] = preds2, risks2, stds2
+
+        return preds, risks, stds
+    
+    def encode_params_as_str(self):
+        return self.models[0].encode_params_as_str()+"_twin"
+
+    def load_model(self):
+
+        print(f"Loading Risk Estimation model: {self.models[0].model_path}/{self.models[0].name}_{self.__class__.__name__}_model.pt")
+        checkpoints = torch.load(f"{self.models[0].model_path}/{self.models[0].name}_{self.__class__.__name__}_model.pt")
+
+        for checkpoint, model in zip(checkpoints, self.models):
+            model.create_model(checkpoint['X'], checkpoint['Y'])
+            model.model.load_state_dict(checkpoint['model_state_dict'])
+            model.model.eval()
+            model.move_model_to_cuda()
+
+    def save_model(self):
+        model_to_save = []
+        for n,model in enumerate(self.models):
+            model_to_save.append(
+                {
+                    "model_state_dict": model.model.state_dict(), 
+                    "X": model.model.train_x,
+                    "Y": model.model.train_y,
+                }
+            )
+        pathlib.Path(f"{self.models[0].model_path}").mkdir(parents=True, exist_ok=True)
+        torch.save(model_to_save, f"{self.models[0].model_path}/{self.models[0].name}_{self.__class__.__name__}_model.pt")
+        torch.save(model_to_save, f"{self.models[0].model_path}/{self.models[0].name}_{self.models[0].encode_params_as_str()}_model.pt")
+
+    def split_dataloader_to_models(self, dataloader):
+        dataset = dataloader.dataset
+        batch_size = dataloader.batch_size
+        
+        assert len(dataset[0][0]) in [9, 10, 13, 14, 17, 18]
+
+        low_indices = []
+        high_indices = []
+        
+        for i in range(len(dataset)):
+            x, y = dataset[i]  # Extract (x, y)
+            
+            if x[self.TIME_FEATURE_INDEX] < 0.4:
+                low_indices.append(i)
+            elif x[self.TIME_FEATURE_INDEX] < 0.6:
+                low_indices.append(i)
+                high_indices.append(i)
+            else:
+                high_indices.append(i)
+
+        return [
+            DataLoader(Subset(dataset, low_indices), batch_size=batch_size, shuffle=True),
+            DataLoader(Subset(dataset, high_indices), batch_size=batch_size, shuffle=True),
+        ] 
+
+    def training_loop(self, dataloader, early_stop=True):
+        
+        dataloaders = self.split_dataloader_to_models(dataloader)
+        
+        for dl,model in zip(dataloaders,self.models):
+            print(f"training new dataloader")
+            model.training_loop(dl, early_stop=early_stop)
+
 
 import collections
 import matplotlib.pyplot as plt

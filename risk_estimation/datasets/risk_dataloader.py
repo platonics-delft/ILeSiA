@@ -1,21 +1,13 @@
 from typing import Iterable, Tuple
-import cv2
 import numpy as np
 from sklearn.model_selection import train_test_split
 import torch
-import torch.nn as nn
-import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader, Dataset, Subset
 import torchvision
-import torchvision.datasets as datasets
-import torchvision.transforms as transforms
 from torchvision.transforms.functional import to_pil_image
 
-from risk_estimation.models.risk_estimation.frame_dropping import (
-    NoFrameDroppingPolicy,
-)
-
-from risk_estimation.models.risk_estimation.risk_feature_extractor import LatentObservationsRiskLabels, VideoObservationsRiskLabels, VideoObservationsRiskAndSafeLabels
+from risk_estimation.datasets.frame_dropping import *
+from risk_estimation.datasets.risk_feature_extractor import *
 from video_embedding.models.video_embedder import VideoEmbedder
 from video_embedding.utils import load
 from video_embedding.image_processing import saved_img_processing

@@ -1,4 +1,22 @@
 
+from scipy.spatial.distance import euclidean
+from scipy.spatial.distance import cosine
+
+from risk_estimation.models.risk_estimator import RiskEstimatorBase
+import numpy as np
+import pandas as pd
+import torch
+from typing import Iterable
+from torch.utils.data import DataLoader
+from sklearn.metrics import accuracy_score
+from risk_estimation.datasets.risk_dataloader import RiskEstimationDataset
+from risk_estimation.datasets.risk_feature_extractor import *
+from risk_estimation.datasets.frame_dropping import OnlyLabelledFramesDroppingPolicy
+import numpy as np
+import matplotlib.pyplot as plt
+
+SAVE_GPU_SPACE = True
+
 class DistanceRiskEstimator(RiskEstimatorBase):
     APPROACH = "DIST"
 
@@ -312,6 +330,33 @@ class MinHyperTrainDistanceRiskEstimator(DistanceRiskEstimator):
             print(f"Selected threshold, considering outliers: {mins[-1]}, mins {mins}")
             self.thr = mins[-1]
             plot_threshold_labelled(risks, y)
+
+def plot_threshold_labelled(observations, labels):
+    # Plotting
+    plt.figure(figsize=(10, 5))  # Set the figure size
+
+    # Scatter plot
+    for label in np.unique(labels):
+        # Select observations by label
+        idx = labels == label
+        plt.scatter(observations[idx], np.zeros_like(observations[idx]) + label,  # Adjust y-values to separate points vertically
+                    c=['red' if label == 0 else 'blue'][0],  # Color red for label 0, blue for label 1
+                    label=f'Label {label}')
+
+    # Adding labels and title
+    plt.xlabel('Observation Value')
+    plt.ylabel('Label')
+    plt.title('Observation Values and Labels')
+    plt.yticks([0, 1])  # Set y-ticks to only show available labels
+
+    # Add a legend
+    plt.legend()
+
+    # Show the plot
+    plt.grid(True)  # Optional: Adds a grid for easier readability
+    plt.show()
+
+
 
 class NMMinHyperTrainDistanceRiskEstimator(NMDistanceRiskEstimator, MinHyperTrainDistanceRiskEstimator):
     pass

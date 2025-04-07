@@ -5,7 +5,7 @@ import torch
 import matplotlib.pyplot as plt
 import numpy as np
 
-from risk_estimation.models.risk_estimation.saliency_map_generator import get_saliency_map_for_image
+from risk_estimation.models.utils.saliency_map_generator import get_saliency_map_for_image
 
 def plot_saliency(image: np.ndarray, 
                   saliency: np.ndarray):

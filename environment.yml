@@ -27,5 +27,5 @@ dependencies:
 - catkin_tools
 - pytest
 - pip: 
-  - fastdtw
   - tqdm
+  - pynput
