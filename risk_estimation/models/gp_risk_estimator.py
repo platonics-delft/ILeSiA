@@ -135,6 +135,7 @@ class GPRiskEstimator(RiskEstimatorBase):
                 output = self.model(X)
                 loss = -mll(output, Y)
                 loss.backward()
+                self.loss = loss.item()
                 optimizer.step()
                 
                 if early_stop:
@@ -359,7 +360,7 @@ class GPEarlyStoppingAndPlot():
         self.all_acc_tests.append(acc_test)
         self.all_acc_alldrops.append(acc_nodrop)
 
-        risk_estimator.epochs_iter.set_description(f"Tr: {acc_train:3.0f}%, Test: {acc_test:3.0f}%")
+        risk_estimator.epochs_iter.set_description(f"Tr: {acc_train:3.0f}%, Test: {acc_test:3.0f}%, loss: {risk_estimator.loss}, Lengthscale grad: {risk_estimator.model.covar_module.base_kernel.lengthscale.grad} Out scale grad: {risk_estimator.model.covar_module.outputscale.grad}")
         if self.use_test_data_for_stopping:
             if (acc_test <= sum(self.acc_tests)/len(self.acc_tests) and epoch > self.patience): #or (acc_test > 99 and acc_train > 99) or (acc_train > 99 and acc_test > 96 and self.acc_tests[-2] > acc_test):
                 print(f"Early stopping on epoch {epoch}, acc_train: {acc_train}")
