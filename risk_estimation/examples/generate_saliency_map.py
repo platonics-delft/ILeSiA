@@ -33,9 +33,7 @@ if __name__ == '__main__':
     safety_model = SafetyLayer()
     model = safety_model.video_embedder.model
     
-    # Image loading and preprocessing
-    image = safety_model.get_random_image()
-
+    
     saliency = get_saliency_map_for_image(model, image)
 
     plot_saliency(image.squeeze().detach().cpu().numpy(),

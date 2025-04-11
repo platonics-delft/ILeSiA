@@ -14,11 +14,12 @@ from video_embedding.image_processing import saved_img_processing
 
 
 class RiskEstimationDataset(Dataset):
-    def __init__(self, X, Y, batch_size: int = 40, has_label=None, transform=None):
+    def __init__(self, X, Y, imgs, batch_size: int = 40, has_label=None, transform=None, video_names=[]):
         """
         Args:
             X (numpy array or torch Tensor): The input features.
             Y (numpy array or torch Tensor): The labels.
+            imgs (numpy array): Corresponding input image
             batch_size (int): Optional
             transform (Sequence of transformations): If it is set, probably image input
         """
@@ -27,6 +28,8 @@ class RiskEstimationDataset(Dataset):
         # convert Y to torch Tensor
         self.Y = torch.tensor(Y, dtype=torch.int).cuda()
 
+        self.imgs = torch.tensor(imgs, dtype=torch.float32).cuda()
+        self.video_names = video_names
         self.batch_size = batch_size
         self.has_label = has_label
         self.transform = transform
@@ -176,12 +179,11 @@ class RiskEstimationDataset(Dataset):
             RiskEstimationDataset: X, e.g. 10 * 40 samples, 8 features each
                                    Y, e.g. 10 * 40 labels
         """        
-        X, Y = [], []
+        X, Y, imgs = [], [], []
 
         dataloaders = cls.load_videos_data_dataloaders(
             video_names, batch_size, frame_dropping_policy
         )
-
 
         for dataloader,video_name in zip(dataloaders, video_names):
             for datasample in dataloader:
@@ -189,15 +191,25 @@ class RiskEstimationDataset(Dataset):
 
                 X.append(x.cpu().detach().numpy())
                 Y.append(y.cpu().detach().numpy())
-
-
+                imgs.append(datasample[0].cpu().detach().numpy())
 
         if len(X) == 0:
-            return RiskEstimationDataset([], [])
+            return RiskEstimationDataset([], [], [])
 
         has_label = RiskEstimationDataset.has_sample_mask(dataloaders)
 
-        return RiskEstimationDataset(np.vstack(X), np.vstack(Y), batch_size, has_label=has_label, transform=transform)
+        return RiskEstimationDataset(np.vstack(X), np.vstack(Y), np.vstack(imgs), batch_size, has_label=has_label, transform=transform, video_names=video_names)
+
+    @classmethod
+    def load_dataloader(cls,
+            video_names: Iterable[str],
+            video_embedder,
+            batch_size=40,
+            frame_dropping_policy=NoFrameDroppingPolicy,
+            features=LatentObservationsRiskLabels,
+            transform=None,
+        ):
+        return DataLoader(cls.load_dataset(video_names, video_embedder, batch_size, frame_dropping_policy, features, transform), batch_size=video_embedder.batch_size)
 
     @classmethod
     def load(
@@ -209,6 +221,7 @@ class RiskEstimationDataset(Dataset):
         features=LatentObservationsRiskLabels,
         transform=None,
     ) -> Tuple[DataLoader, DataLoader]:
+        raise Exception("deprecated")
         """Loads Risk Estimator's split train and test datasets as dataloaders
 
         Args:
@@ -270,17 +283,12 @@ class RiskEstimationDataset(Dataset):
                                          cls.transform
         )
         
-        train_imgset = cls.load_dataset(video_train_names, video_embedder, video_embedder.batch_size, framedrop_policy, VideoObservationsRiskAndSafeLabels, cls.transform)
-        
         if resnet_option:
             test_dataset = cls.load_dataset(video_test_names, video_embedder, video_embedder.batch_size, frame_dropping_policy=framedrop_policy, features=VideoObservationsRiskLabels,
             transform=cls.resnet_transform)
-            test_imgset = cls.load_dataset(video_test_names, video_embedder, video_embedder.batch_size, frame_dropping_policy=framedrop_policy, features=VideoObservationsRiskAndSafeLabels,
-            transform=cls.resnet_transform)
         else:
             test_dataset = cls.load_dataset(video_test_names, video_embedder, video_embedder.batch_size, framedrop_policy, features, cls.transform)
-            test_imgset = cls.load_dataset(video_test_names, video_embedder, video_embedder.batch_size, framedrop_policy, VideoObservationsRiskAndSafeLabels, cls.transform)
         
-        return train_dataset, train_imgset, test_dataset, test_imgset
+        return train_dataset, test_dataset
     
         

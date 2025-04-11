@@ -27,14 +27,13 @@ def benchmark_eval_save(
         title,
         skill_name,
         dataset,
-        imgset,
         video_embedder,
         risk_estimator,
     ):
     path = f"{risk_estimation.path}/autogen/{get_session()}/{skill_name}/"
 
     e = ResultEvaluator(name=f"{title}_{risk_estimator.encode_params_as_str()}", savepath=path, iwanttosee=["accuracy"])
-    e(risk_estimator, video_embedder, dataset.X, dataset.Y, imgset.X, imgset.Y)
+    e(risk_estimator, video_embedder, dataset.X, dataset.Y, dataset.imgs, dataset.imgs)
 
 class ResultEvaluator():
     

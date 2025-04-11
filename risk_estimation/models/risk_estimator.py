@@ -11,11 +11,15 @@ import numpy as np
 class RiskEstimatorBase():
     def __init__(self):
         super(RiskEstimatorBase, self).__init__()
-        self.dataloader_test_for_plot = None
-        self.dataloader_nodrop_for_plot = None
+        self.validation_dataloaders = {}
         self.trained_epoch = 0
         self.feature_extractor = None
         self.train_epoch = 2000
+
+    def set_dataloaders_for_validation(self, list_of_dataloaders: list, names: list):
+        self.validation_dataloaders = {}
+        for dataloader, name in zip(list_of_dataloaders,names):
+            self.validation_dataloaders[name] = dataloader
 
     @property
     def model_path(self):

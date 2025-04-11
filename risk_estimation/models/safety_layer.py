@@ -4,13 +4,13 @@ import numpy as np
 
 from risk_estimation.result_evaluator import ResultEvaluator
 from risk_estimation.datasets.risk_feature_extractor import *
-from risk_estimation.datasets.risk_dataloader import RiskEstimationDataset
+from risk_estimation.datasets.risk_dataloader import RiskEstimationDataset as D
 from risk_estimation.datasets.frame_dropping import *
 from risk_estimation.models.mlp_risk_estimator import MLPRiskEstimator, MLPRiskEstimator2
 from risk_estimation.models.gp_risk_estimator import GPRiskEstimator, TwinGPRiskEstimator
 from risk_estimation.models.dist_risk_estimator import *
 from risk_estimation.models.resnet_risk_estimator import ResNetRiskEstimator
-from video_embedding.utils import all_trial_names, visualize_labelled_video, visualize_labelled_video_frame, get_session
+from video_embedding.utils import all_trial_names, all_test_names, visualize_labelled_video, visualize_labelled_video_frame, get_session
 from video_embedding.models.video_embedder import VideoEmbedder
 
 from risk_estimation.models.risk_estimator import *
@@ -54,19 +54,6 @@ class SafetyLayer:
         self.feature_extractor = feature_extractor
         self.out_assessment = out_assessment
         
-        if latent_dim == 0:
-            session = get_session()
-            if '12' in session:
-                latent_dim = 12
-            elif '16' in session:
-                latent_dim = 16
-            elif '24' in session:
-                latent_dim = 24
-            elif '32' in session:
-                latent_dim = 32
-            else:
-                raise Exception("Not found")
-
         self.video_embedder = VideoEmbedder(name=skill_name, latent_dim=latent_dim, nn_model=Autoencoder2)
         if not enable_risk_estimator:
             self.video_embedder = None
@@ -87,8 +74,16 @@ class SafetyLayer:
         if enable_train:
             self.update()
         else:
-            self.load()
+            self.risk_estimator = get_risk_estimator(
+                approach="deploy",
+                skill_name=self.video_embedder.name,
+                xdim=self.feature_extractor.xdim(self.video_embedder.latent_dim),
+                video_embedder=self.video_embedder,
+                out_assessment=self.out_assessment,
+            )
+            self.risk_estimator.load_model()
 
+        self.skill_name = skill_name
         self.observations = None
         self.risk = 0.0
         self.workersem = threading.Semaphore()
@@ -99,32 +94,6 @@ class SafetyLayer:
     def sample(self, o):
         return self.risk_estimator.sample(o)
 
-    def get_sample_dataloader(self):
-        ''' Manually specify frame on which to train
-        Args:
-            FrameDroppingPolicy: OnlyLabelledFramesDroppingPolicyRisk{skill}{1|2}
-            
-        '''
-        self.video_names = all_trial_names(self.video_embedder.name, include_repr=True)
-        print(f"training on: {self.video_names}")
-
-        self.dataloader, self.test_dataloader = RiskEstimationDataset.load(
-            video_names=self.video_names,
-            video_embedder=self.video_embedder,
-            batch_size=self.video_embedder.batch_size,
-            frame_dropping_policy=eval(f"OnlyLabelledFramesDroppingPolicyRiskPegDoor"),#self.frame_dropping_policy,
-            features=self.feature_extractor,
-        )
-        self.dataloader_images, self.test_dataloader_images = RiskEstimationDataset.load(
-            video_names=self.video_names,
-            video_embedder=self.video_embedder,
-            batch_size=self.video_embedder.batch_size,
-            frame_dropping_policy=eval(f"OnlyLabelledFramesDroppingPolicyRiskPegDoor"),#self.frame_dropping_policy,
-            features=VideoObservationsRiskAndSafeLabels,
-        )
-
-        return self.dataloader
-    
     def update_video_embedding(self, epoch: int):
         """Should be function with no parameters, as specific as possible.
         video_embedder model is loaded.
@@ -166,22 +135,11 @@ class SafetyLayer:
         # self.video_embedder.save_model()
         # self.video_embedder.save_latent_trajectory()
 
-
-    def load(self):
-        self.risk_estimator = get_risk_estimator(
-            approach="deploy",
-            skill_name=self.video_embedder.name,
-            xdim=self.feature_extractor.xdim(self.video_embedder.latent_dim),
-            video_embedder=self.video_embedder,
-            out_assessment=self.out_assessment,
-        )
-        self.risk_estimator.load_model()
-
-
     def update(self):
         """Update model on all found trial for specific skill_name
         """
-        dataloader = self.get_sample_dataloader()
+        dataloader = D.load_dataset(all_trial_names(self.skill_name) + all_test_names(self.skill_name), 
+            self.video_embedder, self.video_embedder.batch_size, self.framedrop_policy, self.features)
         
         self.risk_estimator = get_risk_estimator(
             approach="deploy",
@@ -190,29 +148,7 @@ class SafetyLayer:
             video_embedder=self.video_embedder,
             out_assessment=self.out_assessment,
         )
-        
         self.risk_estimator.training_loop(dataloader)
-        self.risk_estimator.save_model()
-
-        X_test_images, Y_test_images = RiskEstimationDataset.dataloader_to_array(self.test_dataloader_images)
-        # X_train_images, Y_train_images = RiskEstimationDataset.dataloader_to_array(self.dataloader_images)
-
-        X_test, Y_test = RiskEstimationDataset.dataloader_to_array(self.test_dataloader)
-        e = ResultEvaluator(name="Evaluating on test dataset", iwanttosee=["accuracy"], iwanttosave=[])
-        e(self.risk_estimator, self.video_embedder, X_test, Y_test, X_test_images, Y_test_images)
-
-        # X_train, Y_train = RiskEstimationDataset.dataloader_to_array(self.dataloader)
-        # e = ResultEvaluator(name="Evaluating on train dataset", iwanttosee=["accuracy"], iwanttosave=[])
-        # e(self.risk_estimator, self.video_embedder, X_train, Y_train, X_train_images, Y_train_images)
-
-        # dataset = RiskEstimationDataset.load_dataset(self.video_names, self.video_embedder,
-        #     frame_dropping_policy=NoFrameDroppingPolicy,
-        #     features=self.feature_extractor,)
-        # dataset_images = RiskEstimationDataset.load_dataset(self.video_names, self.video_embedder,
-        #     frame_dropping_policy=NoFrameDroppingPolicy,
-        #     features=VideoObservationsRiskAndSafeLabels,)
-        # e = ResultEvaluator(name="Evaluating on NoDrop policy dataset", iwanttosee=["accuracy"], iwanttosave=[])
-        # e(self.risk_estimator, self.video_embedder, dataset.X, dataset.Y, dataset_images.X, dataset_images.Y)
 
     @check_estimator
     def get_estimated_risk(self, observations) -> bool:
@@ -246,38 +182,6 @@ class SafetyLayer:
         print(f"pred: {system_risk_pred}, risk: {risk}, std: {std}, alpha: {float(observations[4].squeeze())}, {time.perf_counter()-t1}")
 
         return system_risk_pred, risk
-    
-
-    ''' Some convenience addons '''
-    def get_random_image(self):
-        try:
-            self.dataloader_images
-            
-        except AttributeError:
-            self.get_sample_dataloader(frame_dropping_policy=OnlyLabelledFramesDroppingPolicy)
-            
-        try:
-            X = self.dataloader_images.dataset.X
-        except AttributeError:
-            X = self.dataloader_images.dataset.dataset.X
-
-        l = len(X)
-        rand_n = np.random.randint(0,l)
-
-        return X[rand_n]
-    
-
-
-
-def get_risk_estimator_from_args(args, video_embedder):
-    """
-        DistanceRiskEstimators need video_embedder to load repre. demontration
-        Trained RiskEstimators need input dim. to initialize model
-    """    
-    features = eval(args.features)
-    xdim = features.xdim(args.video_latent_dim)
-
-    return get_risk_estimator(args.approach, args.skill_name, xdim, video_embedder, args.out_assessment, args.train_patience, args.train_epoch)
 
 def get_risk_estimator(approach, skill_name, xdim, video_embedder, out_assessment="optimistic", train_patience=15000, train_epoch=4000):
     """

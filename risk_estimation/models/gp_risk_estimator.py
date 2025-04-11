@@ -126,7 +126,7 @@ class GPRiskEstimator(RiskEstimatorBase):
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(self.likelihood, self.model)
 
         if early_stop:
-            early_stopping = GPEarlyStoppingAndPlot(self.patience, dataloader, validation_dataloader, self.dataloader_test_for_plot, self.dataloader_nodrop_for_plot)
+            early_stopping = GPEarlyStoppingAndPlot(self.patience, dataloader, validation_dataloader, self.validation_dataloaders)
         self.epochs_iter = tqdm(range(self.train_epoch))
         try:
             for i in self.epochs_iter:
@@ -184,7 +184,6 @@ class GPRiskEstimator(RiskEstimatorBase):
         self.likelihood.train()
         return pred, risk, std
 
-
 class TwinGPRiskEstimator():
     APPROACH = "TwinGP"
     TIME_FEATURE_INDEX = -1 # the last feature is time
@@ -196,24 +195,16 @@ class TwinGPRiskEstimator():
         ]
 
     @property
-    def dataloader_test_for_plot(self):
-        return self.models[0].dataloader_test_for_plot
-    
-    @dataloader_test_for_plot.setter
-    def dataloader_test_for_plot(self, dataloader):
-        dataloaders = self.split_dataloader_to_models(dataloader)
-        for dataloader, model in zip(dataloaders, self.models):
-            model.dataloader_test_for_plot = dataloader
+    def validation_dataloaders(self):
+        return self.models[0].validation_dataloaders
 
-    @property
-    def dataloader_nodrop_for_plot(self):
-        return self.models[0].dataloader_nodrop_for_plot
-
-    @dataloader_nodrop_for_plot.setter
-    def dataloader_nodrop_for_plot(self, dataloader):
-        dataloaders = self.split_dataloader_to_models(dataloader)
-        for dataloader, model in zip(dataloaders, self.models):
-            model.dataloader_nodrop_for_plot = dataloader
+    def set_dataloaders_for_validation(self, list_of_dataloaders: list, names: list):
+        for model in self.models: # empty
+            model.validation_dataloaders = {}
+        for dataloader, name in zip(list_of_dataloaders, names):
+            dataloaders_model_split = self.split_dataloader_to_models(dataloader)
+            for dataloader, model in zip(dataloaders_model_split, self.models):
+                model.validation_dataloaders[name] = dataloader
 
     def sample(self, 
                X: torch.Tensor, # 1D or 2D tensor
@@ -309,7 +300,6 @@ class TwinGPRiskEstimator():
             model.training_loop(dl, early_stop=early_stop)
 
 
-import collections
 import matplotlib.pyplot as plt
 
 class GPEarlyStoppingAndPlot():
@@ -318,61 +308,51 @@ class GPEarlyStoppingAndPlot():
             # All dataloader used for plotting the train accuracy figure
             dataloader=None,
             validation_dataloader=None,
-            test_dataloader=None, 
-            nodrop_dataloader=None,
+            validation_dataloaders={},
             use_test_data_for_stopping: bool = True, # For testing purposes
         ):
         self.patience = patience
-        self.all_acc_trains = []
-        self.all_acc_validations = []
-        self.all_acc_tests = []
-        self.all_acc_alldrops = []
-        self.acc_trains = collections.deque(maxlen=patience)
-        self.acc_validations = collections.deque(maxlen=patience)
-        self.acc_tests = collections.deque(maxlen=patience)
 
-        self.prepare_validation_data(dataloader, validation_dataloader, test_dataloader, nodrop_dataloader)
+        self.acc_plot_data = {"train": [], "valid": []}
+        self.prepare_validation_data(dataloader, validation_dataloader, validation_dataloaders)
 
         self.use_test_data_for_stopping = use_test_data_for_stopping
 
-    def prepare_validation_data(self, dataloader, validation_dataloader, test_dataloader, nodrop_dataloader):
+    def prepare_validation_data(self, dataloader, validation_dataloader, validation_dataloaders):
         self.X_train, Y_train = RiskEstimationDataset.dataloader_to_array(dataloader)
         self.Y_train = Y_train.cpu().numpy().squeeze()
         self.X_validation, Y_validation = RiskEstimationDataset.dataloader_to_array(validation_dataloader)
         self.Y_validation = Y_validation.cpu().numpy().squeeze()
 
-        if test_dataloader is not None:
-            self.X_test, Y_test = RiskEstimationDataset.dataloader_to_array(test_dataloader)
-            self.Y_test = Y_test.cpu().numpy().squeeze()
-            self.X_nodrop, Y_nodrop = RiskEstimationDataset.dataloader_to_array(nodrop_dataloader)
-            self.Y_nodrop = Y_nodrop.cpu().numpy().squeeze()
+        self.validation_datasets = {}
 
+        for name in validation_dataloaders.keys():
+            dataloader = validation_dataloaders[name]
+            X, Y = RiskEstimationDataset.dataloader_to_array(dataloader)
+            self.validation_datasets[name] = {}
+            self.validation_datasets[name]["X"] = X
+            self.validation_datasets[name]["Y"] = Y.cpu().numpy().squeeze()
             
+            self.all_accs_validations = {}
+            self.acc_plot_data[name] = []
+
     def __call__(self, epoch, risk_estimator):
-        acc_train, acc_validation, acc_test, acc_nodrop = self.validate(risk_estimator)
+        acc_train, acc_validation, accs = self.validate(risk_estimator)
 
-        self.acc_trains.append(acc_train)
-        self.acc_validations.append(acc_validation)
-        self.acc_tests.append(acc_test)
-        
-        self.all_acc_trains.append(acc_train)
-        self.all_acc_validations.append(acc_validation)
-        self.all_acc_tests.append(acc_test)
-        self.all_acc_alldrops.append(acc_nodrop)
+        self.acc_plot_data["train"].append(acc_train)
+        self.acc_plot_data["valid"].append(acc_validation)
+        for name in self.validation_datasets.keys():
+            self.acc_plot_data[name].append(accs[name])
 
-        risk_estimator.epochs_iter.set_description(f"Tr: {acc_train:3.0f}%, Test: {acc_test:3.0f}%, loss: {risk_estimator.loss}, Lengthscale grad: {risk_estimator.model.covar_module.base_kernel.lengthscale.grad} Out scale grad: {risk_estimator.model.covar_module.outputscale.grad}")
-        if self.use_test_data_for_stopping:
-            if (acc_test <= sum(self.acc_tests)/len(self.acc_tests) and epoch > self.patience): #or (acc_test > 99 and acc_train > 99) or (acc_train > 99 and acc_test > 96 and self.acc_tests[-2] > acc_test):
-                print(f"Early stopping on epoch {epoch}, acc_train: {acc_train}")
-                return True
-            else:
-                return False
+
+        # risk_estimator.epochs_iter.set_description(f"Tr: {acc_train:3.0f}%, Test: {accs['test']:3.0f}%, loss: {risk_estimator.loss}, Lengthscale grad: {risk_estimator.model.covar_module.base_kernel.lengthscale.grad} Out scale grad: {risk_estimator.model.covar_module.outputscale.grad}")
+        risk_estimator.epochs_iter.set_description(f"Tr: {acc_train:3.0f}%, Test: {accs['test']:3.0f}%, loss: {risk_estimator.loss}")
+
+        if (acc_validation <= sum(self.acc_plot_data["valid"])/len(self.acc_plot_data["valid"][-10:]) and epoch > self.patience):
+            print(f"Early stopping on epoch {epoch}, acc_train: {acc_train}")
+            return True
         else:
-            if (acc_validation <= sum(self.all_acc_validations)/len(self.acc_validations) and epoch > self.patience): # or (acc_validation > 99 and acc_train > 99) or (acc_train > 99 and acc_validation > 96 and self.acc_validations[-2] > acc_validation):
-                print(f"Early stopping on epoch {epoch}, acc_train: {acc_train}")
-                return True
-            else:
-                return False
+            return False
 
     def validate(self, risk_estimator):
 
@@ -381,20 +361,19 @@ class GPEarlyStoppingAndPlot():
         Y_pred, _, _ = risk_estimator.sample(self.X_validation)
         acc_validation =  100 * (self.Y_validation == Y_pred).mean()
 
-        acc_test = None
-        acc_nodrop = None
-        if risk_estimator.dataloader_test_for_plot is not None:
-            Y_pred, _, _ = risk_estimator.sample(self.X_test)
-            acc_test =  100 * (self.Y_test == Y_pred).mean()
-            Y_pred, _, _ = risk_estimator.sample(self.X_nodrop)
-            acc_nodrop =  100 * (self.Y_nodrop == Y_pred).mean()
+        accs = {}
+        for name in self.validation_datasets.keys():
+            dataset = self.validation_datasets[name]
+            Y_pred, _, _ = risk_estimator.sample(dataset["X"])
+            accs[name] = 100 * (dataset["Y"] == Y_pred).mean()
         
-        return acc_train, acc_validation, acc_test, acc_nodrop
+        return acc_train, acc_validation, accs
 
     def plot_save(self, skill_name, risk_estimator):
         plt.figure(1, figsize=(6, 6))
-        plt.plot(np.array([self.all_acc_trains, self.all_acc_validations, self.all_acc_tests, self.all_acc_alldrops]).T, linewidth=2)
-        plt.legend(["Train", "Validation", "Test", "All Drops"])
+        
+        plt.plot(np.array(list(self.acc_plot_data.values())).T, linewidth=2)
+        plt.legend(list(self.acc_plot_data.keys()))
         # plt.show()
         path = f"{risk_estimation.path}/autogen/{get_session()}/{skill_name}/"
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)

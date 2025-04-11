@@ -25,7 +25,7 @@ git clone https://github.com/platonics-delft/franka_impedance_controller # to mo
 git clone https://github.com/franzesegiovanni/franka_buttons # (optional to use franka buttons)
 git clone https://github.com/platonics-delft/panda-ros-py.git
 # (opt) Download our trajectory dataset (4GB); sudo apt-get install git-lfs
-git clone https://gitlab.ciirc.cvut.cz/vancpetr/trajectory_data # cd trajectory_data; git lfs pull
+git clone https://gitlab.ciirc.cvut.cz/vancpetr/trajectory_data # You may need to: cd trajectory_data; git lfs install; git lfs pull
 cd ILeSiA
 conda install -c conda-forge mamba
 mamba env create -f environment.yml # check pytorch package version has cuda (not cpu), e.g., cuda126_mkl_py311_h01662ba_301
@@ -73,11 +73,11 @@ roslaunch skills_manager interactive_skill_risk_trainer.launch localize_box:=tru
 
 ### Do benchmarks
 
-Read and run: `python ILeSiA/risk_estimation/tests/run_final_benchmark_with_parameters.py`
+Read and run: `python ILeSiA/risk_estimation/tests/run_final_benchmark.py`
 
 Examine benchmarks in your browser (`localhost:8000`) by running `http.server`: 
 ```Shell
-python3 -m http.server --directory <your_ws>/src/video_safety_layer/risk_estimation/autogen/
+python3 -m http.server --directory ~/ilesia_ws/src/video_safety_layer/risk_estimation/autogen/
 ```
 
 To make all plots python, run: 
@@ -90,22 +90,22 @@ python /ILeSiA/risk_estimation/scripts/plotter.py
 1. Unlock robot & enable FCI
 2. Panda controller
 ```shell
-source <your_ws>/devel/setup.bash
+source ~/ilesia_ws/devel/setup.bash
 roslaunch franka_impedance_controller cartesian_variable_impedance_controller.launch robot_ip:=<panda ip> load_gripper:=True
 ```
 3. Enable use of franka button (optional)
 ```shell
-source <your_ws>/devel/setup.bash
+source ~/ilesia_ws/devel/setup.bash
 roslaunch franka_buttons read_buttons.launch robot_ip:=<panda ip> username:=<panda (desk)> password:=<panda (desk)>
 ```
 4. Robothon box localizer
 ```shell
-source <your_ws>/devel/setup.bash
+source ~/ilesia_ws/devel/setup.bash
 roslaunch object_localization box_localization.launch template:=demo404
 ```
 5. Main console:
 ```shell
-source <your_ws>/devel/setup.bash
+source ~/ilesia_ws/devel/setup.bash
 roslaunch skills_manager home.launch # move robot to home position
 roslaunch skills_manager interactive_skill_risk_trainer.launch localize_box:=true name_skill:=peg_pick404 session:=manipulation_demo404_augment_12_session risk_policy:=ContinueRiskPolicy # or pick peg manually
 roslaunch skills_manager interactive_skill_risk_trainer.launch localize_box:=true name_skill:=peg_door404  session:=manipulation_demo404_augment_12_session risk_policy:=RecoveryRiskPolicy # test risk estimator with this command

@@ -41,7 +41,7 @@ class MLPRiskEstimator2(RiskEstimatorBase):
     def training_loop(self, dataloader, l1_lambda=1e-5, early_stop=False):
 
         dataloader, validation_dataloader = self.split_dataloader(dataloader)
-        early_stopping = GPEarlyStoppingAndPlot(self.patience, dataloader, validation_dataloader, self.dataloader_test_for_plot, self.dataloader_nodrop_for_plot)
+        early_stopping = GPEarlyStoppingAndPlot(self.patience, dataloader, validation_dataloader, self.validation_dataloaders)
         
         self.epochs_iter = tqdm(range(self.train_epoch))
 
@@ -148,7 +148,7 @@ class MLPRiskEstimator(RiskEstimatorBase):
 
         dataloader, validation_dataloader = self.split_dataloader(dataloader)
 
-        early_stopping = GPEarlyStoppingAndPlot(self.patience, dataloader, validation_dataloader, self.dataloader_test_for_plot, self.dataloader_nodrop_for_plot)
+        early_stopping = GPEarlyStoppingAndPlot(self.patience, dataloader, validation_dataloader, self.validation_dataloaders)
         try:
             for i in self.epochs_iter:
                 for inputs, labels in dataloader:
@@ -156,8 +156,8 @@ class MLPRiskEstimator(RiskEstimatorBase):
                     
                     self.optimizer.zero_grad()
                     outputs = self.model(inputs)
-                    loss = self.criterion(outputs.squeeze(), labels.squeeze())
-                    loss.backward()
+                    self.loss = self.criterion(outputs.squeeze(), labels.squeeze())
+                    self.loss.backward()
                     self.optimizer.step()
 
                 if early_stop:

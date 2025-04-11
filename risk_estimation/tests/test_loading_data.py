@@ -51,11 +51,6 @@ def test_loading(
         framedrop_policy, features,
     )
 
-    # optional, not aligned with other dataloaders
-    risk_estimator.dataloader_test_for_plot = DataLoader(test_dataset, batch_size=video_embedder.batch_size, shuffle=True)
-
-    risk_estimator.dataloader_nodrop_for_plot = DataLoader(dataset_nodrop, batch_size=video_embedder.batch_size, shuffle=True)
-
 
 
 if __name__ == "__main__":
