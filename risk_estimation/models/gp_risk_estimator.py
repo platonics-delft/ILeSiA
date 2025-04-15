@@ -22,7 +22,17 @@ class GPModel(gpytorch.models.ExactGP):
         super(GPModel, self).__init__(train_x, train_y, likelihood)
         # self.mean_module = gpytorch.means.ConstantMean()
         self.mean_module = gpytorch.means.ZeroMean()  
-        self.covar_module = gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel(ard_num_dims=ard_num_dim))
+        self.covar_module = gpytorch.kernels.ScaleKernel(
+            gpytorch.kernels.RBFKernel(
+                ard_num_dims=ard_num_dim,
+                lengthscale_constraint=gpytorch.constraints.Interval(0.1, 1.0),
+                ),
+            # outputscale_constraint=gpytorch.constraints.Interval(0.5, 2.0)
+        )
+
+        # self.covar_module = gpytorch.kernels.ScaleKernel(
+        #     gpytorch.kernels.MaternKernel(nu=1.5, ard_num_dims=ard_num_dim, lengthscale_constraint=gpytorch.constraints.Interval(0.1, 1.0))
+        # )
 
     def forward(self, x):
         mean_x = self.mean_module(x)
@@ -134,6 +144,28 @@ class GPRiskEstimator(RiskEstimatorBase):
                 optimizer.zero_grad()
                 output = self.model(X)
                 loss = -mll(output, Y)
+
+                if False:
+                    self.model.eval()
+                    self.likelihood.eval()
+                    with torch.no_grad(), gpytorch.settings.fast_pred_var():
+                        valid_X = torch.vstack([i for i,j in validation_dataloader.dataset])
+                        valid_Y = torch.vstack([j for i,j in validation_dataloader.dataset])
+                        try:
+                            valid_output = self.model(valid_X)
+                            self.valid_loss = -mll(valid_output, valid_Y.squeeze()).item()
+                        except: 
+                            self.valid_loss = np.inf
+                        test_X = torch.vstack([i for i,j in self.validation_dataloaders["test"].dataset])
+                        test_Y = torch.vstack([j for i,j in self.validation_dataloaders["test"].dataset])
+                        try:
+                            valid_output = self.model(test_X)
+                            self.test_loss = -mll(valid_output, test_Y.squeeze()).item()
+                        except: 
+                            self.test_loss = np.inf
+                    self.model.train()
+                    self.likelihood.train()
+
                 loss.backward()
                 self.loss = loss.item()
                 optimizer.step()
@@ -346,7 +378,8 @@ class GPEarlyStoppingAndPlot():
 
 
         # risk_estimator.epochs_iter.set_description(f"Tr: {acc_train:3.0f}%, Test: {accs['test']:3.0f}%, loss: {risk_estimator.loss}, Lengthscale grad: {risk_estimator.model.covar_module.base_kernel.lengthscale.grad} Out scale grad: {risk_estimator.model.covar_module.outputscale.grad}")
-        risk_estimator.epochs_iter.set_description(f"Tr: {acc_train:3.0f}%, Test: {accs['test']:3.0f}%, loss: {risk_estimator.loss}")
+        print(list(risk_estimator.model.covar_module.base_kernel.lengthscale.detach().cpu().numpy().squeeze()))
+        risk_estimator.epochs_iter.set_description(f"Tr: {acc_train:3.0f}%, Test: {accs['test']:3.0f}%, loss: {risk_estimator.loss:.3f}, valid loss: {risk_estimator.valid_loss:.3f}, test loss: {risk_estimator.test_loss:.3f}")
 
         if (acc_validation <= sum(self.acc_plot_data["valid"])/len(self.acc_plot_data["valid"][-10:]) and epoch > self.patience):
             print(f"Early stopping on epoch {epoch}, acc_train: {acc_train}")
