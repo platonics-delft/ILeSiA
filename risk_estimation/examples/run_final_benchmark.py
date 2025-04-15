@@ -36,7 +36,23 @@ def run_final_benchmarks(
 
     train_dataloader = D.load_dataloader(all_trial_names(skill_name), video_embedder, video_embedder.batch_size, framedrop_policy, features, add_whiteblackimg=add_whiteblackimg)
     test_dataloader = D.load_dataloader(all_test_names(skill_name), video_embedder, video_embedder.batch_size, framedrop_policy, features, add_whiteblackimg=add_whiteblackimg)
-    
+
+    if False: # scaling
+        # from sklearn.preprocessing import StandardScaler
+        # print([(X[:,i].mean(), X[:,i].std()) for i in range(13)])
+
+        for i in range(12):
+            mean = torch.hstack((train_dataloader.dataset.X[:,i], test_dataloader.dataset.X[:,i])).mean()
+            std = torch.hstack((train_dataloader.dataset.X[:,i], test_dataloader.dataset.X[:,i])).std()
+
+            train_dataloader.dataset.X[:,i] = (train_dataloader.dataset.X[:,i] - mean) / std
+            test_dataloader.dataset.X[:,i] = (test_dataloader.dataset.X[:,i] - mean) / std
+
+        print([(train_dataloader.dataset.X[:,i].mean(), train_dataloader.dataset.X[:,i].std()) for i in range(13)])
+
+        # scaler_x = StandardScaler().fit(X[:,:-1])
+        # X[:,:-1] = scaler_x.transform(X[:,:-1])
+
     # optional, view accuracy on these validation dataloaders
     risk_estimator.set_dataloaders_for_validation([
         test_dataloader, 
