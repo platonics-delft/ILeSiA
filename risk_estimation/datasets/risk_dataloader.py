@@ -165,6 +165,7 @@ class RiskEstimationDataset(Dataset):
         frame_dropping_policy=NoFrameDroppingPolicy,
         features=LatentObservationsRiskLabels,
         transform=None,
+        add_whiteblackimg=False,
     ):
         """Loads full dataset.
 
@@ -198,6 +199,24 @@ class RiskEstimationDataset(Dataset):
 
         has_label = RiskEstimationDataset.has_sample_mask(dataloaders)
 
+
+        if add_whiteblackimg: # Consider whole white and black images as risky
+            ones = torch.ones((40,1,64,64)).cuda()
+            frame_numbers = (0.025 * torch.arange(0,40)).unsqueeze(1).cuda()
+            latent = video_embedder.model.encoder(ones)
+            whites = torch.cat((latent, frame_numbers), axis=1)
+            X.append(whites.cpu().detach().numpy())
+            Y.append(np.ones((40,1,1)))
+            imgs.append(ones.cpu().detach().numpy())
+            
+            zeros = torch.zeros((40,1,64,64)).cuda()
+            frame_numbers = (0.025 * torch.arange(0,40)).unsqueeze(1).cuda()
+            latent = video_embedder.model.encoder(zeros)
+            blacks = torch.cat((latent, frame_numbers), axis=1)
+            X.append(blacks.cpu().detach().numpy())
+            Y.append(np.ones((40,1,1)))
+            imgs.append(zeros.cpu().detach().numpy())
+            
         return RiskEstimationDataset(np.vstack(X), np.vstack(Y), np.vstack(imgs), batch_size, has_label=has_label, transform=transform, video_names=video_names)
 
     @classmethod
@@ -208,8 +227,9 @@ class RiskEstimationDataset(Dataset):
             frame_dropping_policy=NoFrameDroppingPolicy,
             features=LatentObservationsRiskLabels,
             transform=None,
+            add_whiteblackimg=False,
         ):
-        return DataLoader(cls.load_dataset(video_names, video_embedder, batch_size, frame_dropping_policy, features, transform), batch_size=video_embedder.batch_size)
+        return DataLoader(cls.load_dataset(video_names, video_embedder, batch_size, frame_dropping_policy, features, transform,add_whiteblackimg=add_whiteblackimg), batch_size=video_embedder.batch_size)
 
     @classmethod
     def load(

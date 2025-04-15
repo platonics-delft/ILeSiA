@@ -27,7 +27,7 @@ def skill_framedropping(data, filepath):
                 data.loc[i, 'SafeTrue'] = 0.0 
     return data
 
-def plotter(filepath, half = "", connection_line=True, series_enabled=True, training_frames_reduced=False, title_enabled=True):
+def plotter(filepath, half = "", connection_line=True, series_enabled=True, training_frames_reduced=False, title_enabled=True, tau_=False, only_og_images=False):
     if "GP+L" in filepath:
         name = "Linear + $\mathcal{GP}$"
     elif "GP" in filepath:
@@ -58,11 +58,10 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True, trai
     else:
         frame_numbers = np.array(np.linspace(0, data.index[-1], 6), dtype=int)
     # frame_numbers = [200,265,370, 590,605, 650]
-    # frame_numbers = [70,108,120,465,475,500]
     data['Risk'] = data['Risk'].astype(float)
     data['Correct'] = data['Correct'].astype(int)
 
-    cropped_frame = extract_image(filepath, frame_numbers=frame_numbers)
+    cropped_frame = extract_image(filepath, frame_numbers, only_og_images)
     if cropped_frame is None:
         return 
     # Create figure and axes using the subplots function
@@ -84,20 +83,34 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True, trai
 
     text_offset = 0.15  # Adjust as needed based on your figure size and DPI
     if half != "": # is left or right
-        fig.text(0.22, 0.82, 'Original', rotation='vertical', va='center', fontsize=8)
-        fig.text(0.22, 0.57, 'Reconstructed', rotation='vertical', va='center', fontsize=8)
+        if not only_og_images:
+            fig.text(0.22, 0.82, 'Original', rotation='vertical', va='center', fontsize=8)
+        else:
+            fig.text(0.18, 0.72, 'Original', rotation='vertical', va='center', fontsize=8)
+        
+        if not only_og_images:        
+            fig.text(0.22, 0.57, 'Reconstructed', rotation='vertical', va='center', fontsize=8)
         fig.text(0.16, 0.44, 'Loss', rotation='horizontal', va='center', fontsize=8)
     else: # full
-        fig.text(0.2, 0.83, 'Original', rotation='vertical', va='center', fontsize=8)
-        fig.text(0.2, 0.67, 'Reconstructed', rotation='vertical', va='center', fontsize=8)
-        fig.text(0.18, 0.555, 'Loss', rotation='horizontal', va='center', fontsize=8)
+        if not only_og_images:
+            fig.text(0.19, 0.83, 'Original', rotation='vertical', va='center', fontsize=8)
+        else:
+            fig.text(0.18, 0.72, 'Original', rotation='vertical', va='center', fontsize=8)
+
+        if not only_og_images:
+            fig.text(0.19, 0.67, 'Reconstructed', rotation='vertical', va='center', fontsize=8)
+        
+        if not only_og_images:
+            fig.text(0.17, 0.55, 'Loss', rotation='horizontal', va='center', fontsize=8)
+        else:
+            fig.text(0.155, 0.63, 'Loss', rotation='horizontal', va='center', fontsize=8)
 
     for n,frame_n in enumerate(frame_numbers):
         # Annotate a line connecting the bottom x-axis point to the image
         axs[1].axvline(x=frame_n, color='black', linestyle='--', zorder=12, linewidth=1.0, ymin=0.06, ymax=0.94)
         
         if connection_line:
-            xy = (frame_n, 1)  # Endpoint in data coordinates for the bottom plot
+            xy = (frame_n, 1.06)  # Endpoint in data coordinates for the bottom plot
             xy2 = (n/len(frame_numbers)+1/(len(frame_numbers)*2), 0)  # Start point in axes fraction for the top plot
             con = patches.ConnectionPatch(xyA=xy2, xyB=xy, coordsA='axes fraction', coordsB='data', 
                                     axesA=axs[0], axesB=axs[1], color="black")
@@ -121,8 +134,8 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True, trai
     # Plot the risk data
     if series_enabled:
         series_enabled_text = ""
-        ax.plot(np.clip(data['Risk'] - data['Std'], 0, 1), label='$\mu$', color="green", linewidth=1, zorder=10)
-        ax.plot(np.clip(data['Risk'], 0, 1), label='$r<0.5$ (safe)', color="blue", linewidth=1, zorder=10)
+        ax.plot(np.clip(data['Risk'], 0, 1), label='$r<0.5$ (safe)', color="green", linewidth=1, zorder=10)
+        ax.plot(np.clip(data['Risk'] - data['Std'], 0, 1), label='$\mu$', color="blue", linewidth=1, zorder=10)
         
         ax.fill_between(data.index, 
                 np.clip(data['Risk'], 0, 1), 
@@ -137,9 +150,15 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True, trai
 
     # Add vertical text for "Safe" below the line and "Risk" above the line
     ax.text(data.index[-1]+5, 0.25, 'Safe', rotation='vertical', verticalalignment='center', fontsize=12, zorder=12)
-    ax.text(data.index[-1]+5, 0.75, 'Risk', rotation='vertical', verticalalignment='center', fontsize=12, zorder=12)
-    ax.text(data.index[-1]+5, 0.5, '$\\tau$', verticalalignment='center', fontsize=12, zorder=12)
-
+    ax.text(data.index[-1]+5, 0.75, 'Risky', rotation='vertical', verticalalignment='center', fontsize=12, zorder=12)
+    if tau_:
+        ax.text(data.index[-1]+5, 0.5, '$\\tau$', verticalalignment='center', fontsize=12, zorder=12)
+    
+    if len(data[data['SafeTrue'] == 1].index) > 0:
+        ax.text(data.index[-1]+2, -0.035, 'Safe\nGround\nTruth', verticalalignment='center', fontsize=5, zorder=12)
+    if len(data[data['RiskTrue'] == 1].index) > 0:
+        ax.text(data.index[-1]+2, 1.03,'Risky\nGround\nTruth',verticalalignment='center',fontsize=5,zorder=12)  
+        
     if half != "":
         fig.text(0.0, 0.23, name, rotation='vertical', va='center', fontsize=15)
     else: # full
@@ -147,7 +166,7 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True, trai
 
     # Plot markers for RiskFlag and SafeFlag
     YD = 1.03
-    ax.scatter(data[data['RiskTrue'] == 1].index, YD*np.ones(data[data['RiskTrue'] == 1]['Risk'].shape), color='red', marker="*", zorder=10)
+    ax.scatter(data[data['RiskTrue'] == 1].index, YD*np.ones(data[data['RiskTrue'] == 1]['Risk'].shape), color='red', marker="*", zorder=0)
     if len(data[data['RiskTrue'] == 1].index) > 0:
         prev = False
         for i in data[data['RiskTrue'] == 1].index:
@@ -184,18 +203,29 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True, trai
 
     handles, labels = ax.get_legend_handles_labels()
     import matplotlib.lines as mlines
-    small_patch = mlines.Line2D([], [], color='red', linewidth=3, label='$r>0.5$ (risk!)')
+    small_patch = mlines.Line2D([], [], color='red', linewidth=3, label='$r\geq0.5$ (risky!)')
 
     handles.insert(0, small_patch)
-    labels.insert(0, '$r>0.5$ (risk!)')
+    labels.insert(0, '$r\geq0.5$ (risky!)')
     from matplotlib.lines import Line2D
     from matplotlib.legend_handler import HandlerTuple
-    small_patch = mpatches.Patch(color="red", label='Ground Truth', linewidth=1.0)
-    small_patch2 = mpatches.Patch(color="green", label='Ground Truth', linewidth=1.0)
+    
+    small_patch, small_patch2 = None, None
+    if len(data[data['SafeTrue'] == 1].index) > 0:
+        small_patch2 = mpatches.Patch(color="green", label='Ground Truth', linewidth=1.0)
+    if len(data[data['RiskTrue'] == 1].index) > 0:
+        small_patch = mpatches.Patch(color="red", label='Ground Truth', linewidth=1.0)
     star_marker = Line2D([0], [0], color="black", marker="*", markersize=5, linestyle="None")
 
-    handles.extend([(star_marker, small_patch, small_patch2)])
-    labels.extend(['Ground Truth'])
+    if small_patch is not None and small_patch2 is not None:
+        handles.extend([(star_marker, small_patch, small_patch2)])
+        labels.extend(['Ground Truth'])
+    elif small_patch is not None:
+        handles.extend([(star_marker, small_patch)])
+        labels.extend(['Ground Truth'])
+    elif small_patch2 is not None:
+        handles.extend([(star_marker, small_patch2)])
+        labels.extend(['Ground Truth'])
 
 
     legend = ax.legend(handles, labels, fontsize="xx-small", loc='lower left', handler_map={tuple: HandlerTuple(ndivide=None)})
@@ -218,7 +248,7 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True, trai
 
 
 
-def extract_image(filepath, frame_numbers):
+def extract_image(filepath, frame_numbers, only_og_images):
     folderpath = Path(filepath).parent
     f = []
     for (dirpath, dirnames, filenames) in os.walk(folderpath):
@@ -248,14 +278,25 @@ def extract_image(filepath, frame_numbers):
         if ret:
             # Convert the image from BGR to RGB
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame = frame[:144, :] # original + reconstructed images
-            # frame = frame[:64, :] # only original image
+            if only_og_images:
+                frame1 = frame[:64, :] # only original image
+            else:
+                frame1 = frame[:128, :] # original + reconstructed images
+            
+            frame2 = 255 * np.ones((10, 64, 3), dtype=np.uint8)
+            frame2[0:10, 0:32, :] = cv2.resize(frame[128:144, :], (32,10))
+            cv2.resize(frame[128:144, :], (8,32))
+            frame = np.concatenate((frame1, frame2), axis=0)
             # frame = frame[64:128, :] # only reconstructed image 
         else:
             print(f"Failed to retrieve frame at index {frame_number}")
 
         frames.append(frame)
-    frames = cv2.hconcat(frames)
+    try:
+        frames = cv2.hconcat(frames)
+    except:
+        print("You picked a frame that exceeds the video frame limit")
+        return None
 
     # Release the video capture object
     cap.release()
@@ -284,12 +325,12 @@ if __name__ == "__main__":
 
     pbar = tqdm(csv_files, desc="Processing files")
     for file_path in pbar:
+        pbar.set_description(file_path.split(root_dir)[-1])
         # plotter(file_path)
         # plotter(file_path, half="left")
         # plotter(file_path, half="right")
-        pbar.set_description(file_path.split(root_dir)[-1])
-        # plotter(file_path, connection_line=False, series_enabled=True, training_frames_reduced=training_frames_reduced)
-        plotter(file_path, connection_line=True, series_enabled=True, training_frames_reduced=training_frames_reduced, title_enabled=title_enabled)
+        plotter(file_path, connection_line=True, series_enabled=True, training_frames_reduced=training_frames_reduced)
+        # plotter(file_path, connection_line=True, series_enabled=True, training_frames_reduced=training_frames_reduced, title_enabled=title_enabled)
         # plotter(file_path, connection_line=False, series_enabled=False)
         # plotter(file_path, half="left", connection_line=False)
         # plotter(file_path, half="right", connection_line=False)

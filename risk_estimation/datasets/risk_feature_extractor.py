@@ -135,6 +135,8 @@ class StampedLatentObservationsRiskLabels(FeatureExtractor):
 
         if False: # TEST_PLOT
             import matplotlib.pyplot as plt
+            plt.hist(latent.detach().cpu().numpy(), bins=100)
+            plt.show()
             plt.imshow(video_embedder.model(data[0])[0,0].detach().cpu(),cmap="grey")
             plt.show()
 

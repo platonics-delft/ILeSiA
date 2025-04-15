@@ -22,6 +22,7 @@ def run_final_benchmarks(
         train_epoch: int,
         train_patience: int,
         save_video_flag: bool,
+        add_whiteblackimg: bool,
     ):
     if isinstance(features, str): features = eval(features)
     if isinstance(framedrop_policy, str): framedrop_policy = eval(framedrop_policy)
@@ -33,8 +34,8 @@ def run_final_benchmarks(
         approach, skill_name, features.xdim(video_latent_dim), video_embedder, out_assessment, train_patience, train_epoch
     )
 
-    train_dataloader = D.load_dataloader(all_trial_names(skill_name), video_embedder, video_embedder.batch_size, framedrop_policy, features)
-    test_dataloader = D.load_dataloader(all_test_names(skill_name), video_embedder, video_embedder.batch_size, framedrop_policy, features)
+    train_dataloader = D.load_dataloader(all_trial_names(skill_name), video_embedder, video_embedder.batch_size, framedrop_policy, features, add_whiteblackimg=add_whiteblackimg)
+    test_dataloader = D.load_dataloader(all_test_names(skill_name), video_embedder, video_embedder.batch_size, framedrop_policy, features, add_whiteblackimg=add_whiteblackimg)
     
     # optional, view accuracy on these validation dataloaders
     risk_estimator.set_dataloaders_for_validation([
@@ -87,10 +88,14 @@ approaches = [
     # 'TwinGP',
 ]
 filter_samples_to_label_areas = False
+add_whiteblackimg = True
+
+
 
 for skill_name in skills:
     for approach in approaches:
-        set_session("quantitative_study")
+        # set_session("quantitative_study")
+        set_session("AE3")
         if filter_samples_to_label_areas:
             framedrop_policy = f"OnlyLabelledFramesDroppingPolicyRisk{mapping[skill_name]}"
         else:
@@ -107,6 +112,7 @@ for skill_name in skills:
             train_epoch=500,
             train_patience=6000,
             save_video_flag=True,
+            add_whiteblackimg=add_whiteblackimg,
         )
 
 

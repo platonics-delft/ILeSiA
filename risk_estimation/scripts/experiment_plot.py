@@ -11,7 +11,7 @@ def plot_risk_data(data_door, data_peg):
 
     # Plot door data
     ax1.plot(data_door[:, 0], data_door[:, 1], marker='*', linestyle='-', linewidth=2, label='Door Risk')  
-    ax1.axhline(0.5, color='blue', linestyle='--', linewidth=2, label='Risk Threshold (0.5)')
+    ax1.axhline(0.5, color='blue', linestyle='--', linewidth=2, label='Risk Threshold ($\tau$)')
     ax1.set_xlabel('Door Opened [-]')
     ax1.set_ylabel('Risk Value')
     ax1.set_ylim(0, 1)
@@ -19,7 +19,7 @@ def plot_risk_data(data_door, data_peg):
     ax1.legend(loc='lower center')
     # Plot peg data
     ax2.plot(data_peg[:, 0], data_peg[:, 1], marker='*', linestyle='-', linewidth=2, label='Peg Risk')  
-    ax2.axhline(0.5, color='blue', linestyle='--', linewidth=2, label='Risk Threshold (0.5)')
+    ax2.axhline(0.5, color='blue', linestyle='--', linewidth=2, label='Risk Threshold ($\tau$)')
     ax2.set_xlabel('Peg Rotation ($^{\circ}$)')
     ax2.set_ylim(0, 1)
     ax2.grid(True)
@@ -54,7 +54,7 @@ def plot_risk_polar(data_door, data_peg):
     ax1.set_theta_direction(-1)  # Clockwise rotation
     ax1.set_rticks([0.2, 0.5, 0.8])  # Radial ticks
     ax1.set_ylim(0, 1)  # Set radius limit
-    ax1.axhline(0.5, color='red', linestyle='--', label="Risk Threshold (0.5)")
+    ax1.axhline(0.5, color='red', linestyle='--', label="Risk Threshold ($tau$)")
     ax1.legend()
 
     # Plot peg data in polar coordinates
@@ -64,7 +64,7 @@ def plot_risk_polar(data_door, data_peg):
     ax2.set_theta_direction(-1)
     ax2.set_rticks([0.2, 0.5, 0.8])
     ax2.set_ylim(0, 1)
-    ax2.axhline(0.5, color='red', linestyle='--', label="Risk Threshold (0.5)")
+    ax2.axhline(0.5, color='red', linestyle='--', label="Risk Threshold ($\tau$)")
     ax2.legend()
 
     # Adjust layout and show the plot

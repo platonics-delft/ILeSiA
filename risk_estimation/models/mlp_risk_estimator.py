@@ -18,7 +18,7 @@ class MLPRiskEstimator2(RiskEstimatorBase):
                  xdim: int = 8,
                  batch_size: int = 40,
                  thr: float = 0.5,
-                 learning_rate: float = 0.01,
+                 learning_rate: float = 0.001,
                  train_patience: int = 3000,
                  train_epoch: int = 3000, 
                  ):
@@ -69,6 +69,8 @@ class MLPRiskEstimator2(RiskEstimatorBase):
                 total_loss_batch.backward()
                 self.optimizer.step()
                 total_loss += bce_loss.item()
+
+                self.loss = total_loss_batch.item()
                 # Track only the BCE loss for reporting
 
 
