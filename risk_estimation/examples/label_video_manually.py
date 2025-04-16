@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import cv2
-from video_embedding.models.video_embedder import VideoEmbedder
+from video_embedding.models.video_embedding_dataset import load_dataloader
 from video_embedding.utils import clip_samples, get_session, set_session, tensor_image_to_cv2, load
 import argparse
 import numpy as np
@@ -20,18 +20,17 @@ def save(self, file='last'):
                 spiral_flag=self['spiral_flag'],
                 risk_flag=self['risk_flag'],
                 safe_flag=self['safe_flag'],
-                novelty_flag=self['novelty_flag'],
-                recovery_phase=self['recovery_phase'],)
+                novel_risk_flag=self['novel_risk_flag'],
+                novel_safe_flag=self['novel_safe_flag'],
+            )
 
 def label_video(args):
     set_session(args['session'])
     data = dict(load(file=args['video']))
-    if input("Save cropped video (400 frames)? (y)") == 'y':
-        data = clip_samples(data)
-        save(data, file=args['video'])
-
+    
     # Create VideoEmbedder, assign name, load model and data
-    video_embedder = VideoEmbedder(latent_dim=8)
+    dataloader = load_dataloader(args['video'], batch_size=64)
+    video_embedder = VideoEmbedder(latent_dim=12)
     video_embedder.name = args['video']
     video_embedder.load(name=args['video'])
 
@@ -39,8 +38,8 @@ def label_video(args):
 
     risk_flag = np.zeros((len(video_embedder.tensor_images)))
     safe_flag = np.zeros((len(video_embedder.tensor_images)))
-    novelty_flag = np.zeros((len(video_embedder.tensor_images)))
-    recovery_phase = -1.0 * np.ones((len(video_embedder.tensor_images)))
+    novel_risk_flag = np.zeros((len(video_embedder.tensor_images)))
+    novel_safe_flag = np.zeros((len(video_embedder.tensor_images)))
     spiral_flag = np.zeros((len(video_embedder.tensor_images)))
     for n, image in enumerate(video_embedder.tensor_images):
         image = video_embedder.tensor_images[n : n + 1]
@@ -65,27 +64,29 @@ def label_video(args):
             break
         # cv2.waitKey(0)  # Wait for a key press to close the window
         
-        risk_flag[n] = raf.risk_flag
-        safe_flag[n] = raf.safe_flag
-        novelty_flag[n] = raf.novelty_flag
-        recovery_phase[n] = raf.recovery_phase
+        if args['label_novel_dataset']:
+            novel_risk_flag[n] = raf.novel_risk_flag
+            novel_safe_flag[n] = raf.novel_safe_flag
+        else:
+            risk_flag[n] = raf.risk_flag
+            safe_flag[n] = raf.safe_flag
         spiral_flag[n] = raf.spiral_flag
 
     
     print("Risk flag array:")
     print(risk_flag)
     print(safe_flag)
-    print(recovery_phase)
+    print(novel_risk_flag)
+    print(novel_safe_flag)
     print("----------------") 
 
-    if args['only_label_recovery_phase']:
-        data['recovery_phase'] = np.array([recovery_phase])
+    if args['label_novel_dataset']:
+        data['novel_risk_flag'] = np.array([risk_flag])
+        data['novel_safe_flag'] = np.array([safe_flag])
     else:
         data['risk_flag'] = np.array([risk_flag])
         data['safe_flag'] = np.array([safe_flag])
-        data['novelty_flag'] = np.array([novelty_flag])
-        data['recovery_phase'] = np.array([recovery_phase])
-        data['spiral_flag'] = np.array([spiral_flag])
+    data['spiral_flag'] = np.array([spiral_flag])
 
 
     print("Manual labelling ended, see the results")
@@ -99,24 +100,20 @@ def label_video(args):
         else:
             risk_label = ''
         
-        if novelty_flag[n]:
-            novelty_label = 'N'
+        if novel_risk_flag[n]:
+            novelty_label = 'Nov R'
+        elif novel_safe_flag[n]:
+            novelty_label = 'Nov S'
         else:
             novelty_label = ''
-
-        if recovery_phase[n] != -1.0:
-            recovery_phase_label = str(round(recovery_phase[n], 1))
-        else:
-            recovery_phase_label = ""
 
 
         img = tensor_image_to_cv2(video_embedder.tensor_images[n])
         img = np.tile(img, (10, 10))
         cv2.putText(img, risk_label, (0, 12), cv2.FONT_HERSHEY_SIMPLEX,
             0.5, (255, 0, 0), 1, 2)
-        cv2.putText(img, recovery_phase_label, (12, 0), cv2.FONT_HERSHEY_SIMPLEX,
+        cv2.putText(img, novelty_label, (12, 0), cv2.FONT_HERSHEY_SIMPLEX,
             0.5, (255, 0, 0), 1, 2)
-
 
         cv2.namedWindow("Image", cv2.WINDOW_NORMAL)
         cv2.resizeWindow("Image", 1000, 500)
@@ -134,16 +131,9 @@ if __name__ == "__main__":
         description="",
         epilog="",
     )
-    parser.add_argument(
-        "--video",
-        default="peg_door_trial_6",
-    )
-    parser.add_argument(
-        "--session",
-        default="",
-    )
-    parser.add_argument("--only_label_recovery_phase", action="store_true")
-    parser.add_argument("--label_all", dest="only_label_recovery_phase", action="store_false")
-    parser.set_defaults(only_label_recovery_phase=True)
+    parser.add_argument("--video", type=str)
+    parser.add_argument("--session", default="quantitative_study")
+    parser.add_argument("--label_novel_dataset", action="store_true")
+    parser.set_defaults(label_novel_dataset=False)
     
     label_video(vars(parser.parse_args()))

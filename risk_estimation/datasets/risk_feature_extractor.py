@@ -26,9 +26,9 @@ class LatentObservationsSafeLabels(FeatureExtractor):
     def extract(cls, data: Tuple, video_embedder=None, video_name=None):
         video_embedder.optimizer.zero_grad()
         if SAVE_GPU_MEMORY:
-            X = video_embedder.model.encoder_batched(data["img"])
+            X = video_embedder.model.encoder_batched(torch.tensor(data["img"], dtype=torch.float32).cuda()).detach().cpu().numpy()
         else:
-            X = video_embedder.model.encoder(data["img"])
+            X = video_embedder.model.encoder(torch.tensor(data["img"], dtype=torch.float32).cuda()).detach().cpu().numpy()
         Y = data["safe_flag"]
         return X, Y
     
@@ -53,9 +53,9 @@ class LatentObservationsRiskLabels(FeatureExtractor):
     def extract(cls, data: Tuple, video_embedder=None, video_name=None):
         video_embedder.optimizer.zero_grad()
         if SAVE_GPU_MEMORY:
-            X = video_embedder.model.encoder_batched(data["img"])
+            X = video_embedder.model.encoder_batched(torch.tensor(data["img"], dtype=torch.float32).cuda()).detach().cpu().numpy()
         else:
-            X = video_embedder.model.encoder(data["img"])
+            X = video_embedder.model.encoder(torch.tensor(data["img"], dtype=torch.float32).cuda()).detach().cpu().numpy()
         Y = data["risk_flag"]
         return X, Y
     
@@ -80,9 +80,9 @@ class ResnetLatentObservationsRiskLabels(FeatureExtractor):
         imgs_new = torch.cat(imgs_new)
 
         if SAVE_GPU_MEMORY:
-            X = video_embedder.model.encoder_batched(imgs_new)
+            X = video_embedder.model.encoder_batched(torch.tensor(data["img"], dtype=torch.float32).cuda()).detach().cpu().numpy()
         else:
-            X = video_embedder.model.encoder(imgs_new)
+            X = video_embedder.model.encoder(torch.tensor(data["img"], dtype=torch.float32).cuda()).detach().cpu().numpy()
         Y = data["risk_flag"]
         return X, Y
     

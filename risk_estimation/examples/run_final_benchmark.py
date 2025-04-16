@@ -34,8 +34,8 @@ def run_final_benchmarks(
         approach, skill_name, features.xdim(video_latent_dim), video_embedder, out_assessment, train_patience, train_epoch
     )
 
-    train_dataloader = D.load_dataloader(all_trial_names(skill_name), video_embedder, video_embedder.batch_size, framedrop_policy, features, add_whiteblackimg=add_whiteblackimg)
-    test_dataloader = D.load_dataloader(all_test_names(skill_name), video_embedder, video_embedder.batch_size, framedrop_policy, features, add_whiteblackimg=add_whiteblackimg)
+    train_dataloader = D.load_dataloader(all_trial_names(skill_name), video_embedder, 64, framedrop_policy, features, add_whiteblackimg=add_whiteblackimg)
+    test_dataloader = D.load_dataloader(all_test_names(skill_name), video_embedder, 64, framedrop_policy, features, add_whiteblackimg=add_whiteblackimg)
 
     # optional, view accuracy on these validation dataloaders
     risk_estimator.set_dataloaders_for_validation([
@@ -51,8 +51,8 @@ def run_final_benchmarks(
     benchmark_eval_save("Train_dataset", skill_name, train_dataloader.dataset, video_embedder, risk_estimator)
     benchmark_eval_save("Test_dataset", skill_name, test_dataloader.dataset, video_embedder, risk_estimator)
     # Additional no drop eval
-    # train_dataloader = D.load_dataloader(all_trial_names(skill_name), video_embedder, video_embedder.batch_size, NoFrameDroppingPolicy, features, add_whiteblackimg=add_whiteblackimg)
-    # test_dataloader = D.load_dataloader(all_test_names(skill_name), video_embedder, video_embedder.batch_size, NoFrameDroppingPolicy, features, add_whiteblackimg=add_whiteblackimg)
+    # train_dataloader = D.load_dataloader(all_trial_names(skill_name), video_embedder, 64, NoFrameDroppingPolicy, features, add_whiteblackimg=add_whiteblackimg)
+    # test_dataloader = D.load_dataloader(all_test_names(skill_name), video_embedder, 64, NoFrameDroppingPolicy, features, add_whiteblackimg=add_whiteblackimg)
     # benchmark_eval_save("NoDrop_Prior_is_Safe", skill_name, nds_train_dataset, video_embedder, risk_estimator)
     
     for video_name in train_dataloader.dataset.video_names + test_dataloader.dataset.video_names:
@@ -73,7 +73,7 @@ mapping = {
 skills = [
     "peg_pick404", 
     "peg_door404", 
-    # "peg_place404", 
+    "peg_place404", 
     # "slider_move404", 
     # "slider_move404_2", # has better alignment between train and test trajectory data
     # "probe_pick404"
@@ -101,7 +101,7 @@ for skill_name in skills:
             skill_name=skill_name,
             video_latent_dim=12,
             approach=approach,
-            embedding_approach="Autoencoder2",
+            embedding_approach="Autoencoder3",
             features="StampedLatentObservationsRiskLabels",
             framedrop_policy=framedrop_policy,
             out_assessment="cautious",

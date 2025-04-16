@@ -29,7 +29,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", default="peg_door404")
     parser.add_argument("--session", default="quantitative_study")
-    parser.add_argument("--num_epochs", default=1, type=int)
+    parser.add_argument("--num_epochs", default=50, type=int)
     parser.add_argument("--nn_model", default="Autoencoder3")
     parser.add_argument("--update", action="store_true")
     parser.set_defaults(update=False)

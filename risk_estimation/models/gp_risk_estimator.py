@@ -109,7 +109,7 @@ class GPRiskEstimator(RiskEstimatorBase):
 
 
 
-    def training_loop(self, dataloader, early_stop:bool=False):
+    def training_loop(self, dataloader, early_stop:bool=False, see_all_losses:bool=False):
         """_summary_
 
         Args:
@@ -136,7 +136,7 @@ class GPRiskEstimator(RiskEstimatorBase):
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(self.likelihood, self.model)
 
         if early_stop:
-            early_stopping = GPEarlyStoppingAndPlot(self.patience, dataloader, validation_dataloader, self.validation_dataloaders)
+            early_stopping = GPEarlyStoppingAndPlot(self.patience, dataloader, validation_dataloader, self.validation_dataloaders, see_all_losses=see_all_losses)
         self.epochs_iter = tqdm(range(self.train_epoch))
         try:
             for i in self.epochs_iter:
@@ -145,7 +145,7 @@ class GPRiskEstimator(RiskEstimatorBase):
                 output = self.model(X)
                 loss = -mll(output, Y)
 
-                if True:
+                if see_all_losses:
                     self.model.eval()
                     self.likelihood.eval()
                     with torch.no_grad(), gpytorch.settings.fast_pred_var():
@@ -342,6 +342,7 @@ class GPEarlyStoppingAndPlot():
             validation_dataloader=None,
             validation_dataloaders={},
             use_test_data_for_stopping: bool = True, # For testing purposes
+            see_all_losses: bool = False,
         ):
         self.patience = patience
 
@@ -349,6 +350,7 @@ class GPEarlyStoppingAndPlot():
         self.prepare_validation_data(dataloader, validation_dataloader, validation_dataloaders)
 
         self.use_test_data_for_stopping = use_test_data_for_stopping
+        self.see_all_losses = see_all_losses
 
     def prepare_validation_data(self, dataloader, validation_dataloader, validation_dataloaders):
         self.X_train, Y_train = RiskEstimationDataset.dataloader_to_array(dataloader)
@@ -378,8 +380,11 @@ class GPEarlyStoppingAndPlot():
 
 
         # risk_estimator.epochs_iter.set_description(f"Tr: {acc_train:3.0f}%, Test: {accs['test']:3.0f}%, loss: {risk_estimator.loss}, Lengthscale grad: {risk_estimator.model.covar_module.base_kernel.lengthscale.grad} Out scale grad: {risk_estimator.model.covar_module.outputscale.grad}")
-        print(list(risk_estimator.model.covar_module.base_kernel.lengthscale.detach().cpu().numpy().squeeze()))
-        risk_estimator.epochs_iter.set_description(f"Tr: {acc_train:3.0f}%, Test: {accs['test']:3.0f}%, loss: {risk_estimator.loss:.3f}, valid loss: {risk_estimator.valid_loss:.3f}, test loss: {risk_estimator.test_loss:.3f}")
+        if self.see_all_losses:
+            risk_estimator.epochs_iter.set_description(f"Tr: {acc_train:3.0f}%, Test: {accs['test']:3.0f}%, loss: {risk_estimator.loss:.3f}, valid loss: {risk_estimator.valid_loss:.3f}, test loss: {risk_estimator.test_loss:.3f}")
+            print(list(risk_estimator.model.covar_module.base_kernel.lengthscale.detach().cpu().numpy().squeeze()))
+        else:
+            risk_estimator.epochs_iter.set_description(f"Tr: {acc_train:3.0f}%, Test: {accs['test']:3.0f}%, loss: {risk_estimator.loss:.3f}")
 
         if (acc_validation <= sum(self.acc_plot_data["valid"])/len(self.acc_plot_data["valid"][-10:]) and epoch > self.patience):
             print(f"Early stopping on epoch {epoch}, acc_train: {acc_train}")

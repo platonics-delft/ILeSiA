@@ -191,6 +191,17 @@ class Autoencoder3(nn.Module):
         x_reconstructed = self.decoder(z)
         return x_reconstructed
 
+    def forward_batched(self,x):
+        ''' Only nneded when GPU low memory '''
+        dl = DataLoader(x, batch_size = 1)
+        out = []
+        with torch.no_grad():
+            for batch in dl:
+                latent_images_batch = self.encoder(batch)
+                latent_images_batch = self.decoder(latent_images_batch)
+                out.append(latent_images_batch)
+        return torch.cat(out, dim=0)
+
 class LargeAutoencoder(nn.Module):
     def __init__(self, latent_dim=10):
         super(LargeAutoencoder, self).__init__()

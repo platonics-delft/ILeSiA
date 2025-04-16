@@ -165,7 +165,7 @@ class RiskEstimationDataset(Dataset):
         ):
         """ Wrapper to get DataLoader instead of dataset
         """
-        return DataLoader(cls.load_dataset(video_names, video_embedder, batch_size, frame_dropping_policy, features, transform,add_whiteblackimg=add_whiteblackimg), batch_size=video_embedder.batch_size)
+        return DataLoader(cls.load_dataset(video_names, video_embedder, batch_size, frame_dropping_policy, features, transform,add_whiteblackimg=add_whiteblackimg), batch_size=batch_size)
 
     
     resnet_transform = torchvision.transforms.Compose([
