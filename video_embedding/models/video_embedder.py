@@ -1,59 +1,48 @@
 import json
 import pathlib
-from typing import Iterable
+from matplotlib import pyplot as plt
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import DataLoader, random_split
 
 import numpy as np
 import cv2
 
 import risk_estimation, video_embedding
-# from video_embedding.models.elastic_weight_consolidation import ElasticWeightConsolidation
-from video_embedding.utils import get_session, load
+from video_embedding.utils import get_session
 from video_embedding.models.nerual_networks.autoencoder import *
 from tqdm import tqdm
 
-from torch.utils.data import DataLoader
-
-from video_embedding.image_processing import saved_img_processing
-
-class VideoEmbedder(): #ElasticWeightConsolidation):
+class VideoEmbedder():
     def __init__(
         self,
         name: str,
         latent_dim: int = 12,
-        batch_size: int = 40,
-        frame_dropping=None,
         learning_rate: float = 0.01,
-        nn_model: str = Autoencoder2,
+        nn_model: str = Autoencoder3,
     ):
         """Has scritly defined paths (see videos_path, models_path, latent_trajectory_path)
         Args:
             name (str): Skill and model name
-            latent_dim (int, optional): Defaults to 8.
-            batch_size (int, optional): Defaults to 40.
+            latent_dim (int, optional):
         """
         super(VideoEmbedder, self).__init__()
         self.name = name  # skill name
         self.model_train_record = []
-
-        self.frame_dropping = frame_dropping
-        
+       
         if isinstance(nn_model, str):
             nn_model = eval(nn_model)
-        self.model = nn_model(latent_dim)
+        self.model: nn.Module = nn_model(latent_dim)
         self.latent_dim = latent_dim
         # Move the model to GPU
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model.to(self.device)
         # Define the loss function and optimizer
         self.criterion = nn.MSELoss()
-        self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
-
-        # Define batch size
-        self.batch_size = batch_size  # Adjust the batch size as needed
+        self.optimizer = optim.Adam(
+            self.model.parameters(), lr=learning_rate, weight_decay=0.0000001
+        )
 
     @property
     def videos_path(self):
@@ -67,10 +56,10 @@ class VideoEmbedder(): #ElasticWeightConsolidation):
     def latent_trajectory_path(self):
         return f"{video_embedding.path}/latent_trajectories/{get_session()}/"
 
-    def save_latent_trajectory(self):
+    def save_latent_trajectory(self, tensor_images):
         path = self.latent_trajectory_path
 
-        latent_traj = self.model.encoder(self.tensor_images)
+        latent_traj = self.model.encoder(tensor_images)
         latent_traj = latent_traj.cpu().detach().numpy()
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
         np.savez(
@@ -78,60 +67,123 @@ class VideoEmbedder(): #ElasticWeightConsolidation):
             latent_traj=latent_traj,
         )
 
-    def load(self, videos: Iterable[str], shuffle=True):
-        self.dataloader = self.load_dataset(videos)
+    def nuclear_norm_loss(self, x):
+        # Compute the nuclear norm of the input tensor
+        # x = x.view(x.size(0), -1)  # Flatten the tensor
+        u, s, v = torch.svd(x)
+        return torch.sum(s)
 
-    def load_dataset(
-        self, train_names, shuffle=True
-    ):
-        if isinstance(train_names, str):
-            train_names = [train_names]
+    def split_dataloader(self, dataloader: DataLoader):
+        """Splits the dataloader into two dataloaders"""
+        dataset = dataloader.dataset
+        dataset_size = len(dataset)
+        train_size = int(np.floor(0.8 * dataset_size))
+        test_size = dataset_size - train_size
+        train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
 
+        train_dataloader = DataLoader(
+            train_dataset, batch_size=dataloader.batch_size, shuffle=True
+        )
+        test_dataloader = DataLoader(
+            test_dataset, batch_size=dataloader.batch_size, shuffle=False
+        )
+        return train_dataloader, test_dataloader
+
+    def train(self, dataloader, train_names, num_epochs: int = 1000):
         self.train_names = train_names
-
-        image_tensor_list = []
-        for n in range(len(train_names)):
-            name = train_names[n]
-            """ Loads data """
-            data = load(file=name)
-            images = data["img"]
-
-            img_tensor = torch.tensor(images, dtype=torch.float32).cuda()
-            resized_images = torch.zeros((len(images), 64, 64)).cuda()
-            for i in range(len(images)):
-                resized_images[i] = saved_img_processing(img_tensor[i])
-
-            resized_images = resized_images.unsqueeze(1)  # Remove the channel dimension
-            # resized_images = resized_images 
-
-            image_tensor_list.append(resized_images)
-
-        
-        images = torch.cat(image_tensor_list, dim=0)
-        dataset = TensorDataset(images)
-
-        return DataLoader(dataset, batch_size=self.batch_size, shuffle=shuffle)
-
-    def train(self, num_epochs: int):
-        pviz = tqdm(range(num_epochs))
         try:
-            for epoch in pviz:
-                for data in self.dataloader:
-                    input_batch = data[0]
-                    # input_batch = data.flatten(-1)
-                    self.optimizer.zero_grad()
-                    output = self.model(input_batch)
+            self.training_loop(dataloader, num_epochs=num_epochs)
 
-                    loss = self.criterion(output, input_batch) # + self.ewc_loss()
-                    loss.backward()
-                    self.optimizer.step()
+        except KeyboardInterrupt as e:
+            print("Training interrupted by user.")
+            self.save_model()
+            raise e
 
-                pviz.set_description(
-                    desc=f"Epoch [{epoch}/{num_epochs}], Loss: {loss.item()}"
+    def training_loop(self, dataloader: DataLoader, num_epochs: int, patience = 100):    
+        best_loss: float = float("inf")
+        counter = 0
+
+        train_loader, test_loader = self.split_dataloader(dataloader)
+
+        pviz = tqdm(range(num_epochs))
+        for epoch in pviz:
+            if epoch % 10 == 0 and epoch > 0:
+                self.optimizer.param_groups[0]["lr"] *= 0.5
+            for data in train_loader:
+                data_tensor = data[0]
+                next_image = data_tensor[:, 1, :, :].unsqueeze(1)
+                input_batch = data_tensor[:, 0, :, :].unsqueeze(1)
+                self.optimizer.zero_grad()
+                # output = self.model(input_batch)
+                latent_vec = self.model.encoder(input_batch)
+                output = self.model.decoder(latent_vec)
+
+                latent_vec_next_image = self.model.encoder(next_image)
+
+                alpha = 100.0
+                beta = 0.0001
+                l1_lambda = 0.00001
+                continuity_loss_lambda = 1.0
+
+                # continuity loss
+                continuity_loss = F.mse_loss(latent_vec, latent_vec_next_image)
+
+                # l1 loss on all weights
+                l1_loss = 0
+                for name, param in self.model.named_parameters():
+                    l1_loss += torch.sum(torch.abs(param))
+
+                # reconstruction loss
+                recon_loss = self.criterion(output, input_batch)
+
+                # nuclear norm loss
+                nuclear_loss = self.nuclear_norm_loss(latent_vec)
+
+                loss = (
+                    alpha * recon_loss
+                    + beta * nuclear_loss
+                    + l1_lambda * l1_loss
+                    + continuity_loss_lambda * continuity_loss
                 )
-        except KeyboardInterrupt:
-            pass
-        # self.register_ewc_params()
+                loss.backward()
+                self.optimizer.step()
+
+                train_loss = loss.item()
+
+            # compute the test loss
+            for data in test_loader:
+                
+                data_tensor = data[0]
+                next_image = data_tensor[:, 1, :, :].unsqueeze(1)
+                input_batch = data_tensor[:, 0, :, :].unsqueeze(1)
+                # input_batch = data[0]
+                with torch.no_grad():
+                    latent_vec = self.model.encoder(input_batch)
+                    output = self.model.decoder(latent_vec)
+                    loss = self.criterion(output, input_batch)
+
+            val_loss = loss.item()
+
+            if val_loss < best_loss:
+                best_loss = val_loss
+                counter = 0  # Reset patience counter
+            else:
+                counter += 1
+
+            if counter >= patience:  # Stop if no improvement for `patience` epochs
+                print("Early stopping triggered")
+                ret = "stop"
+            else:
+                ret = "continue"
+
+            if ret == "stop":
+                print(f"No improvement for {patience} epochs. Stopping training.")
+                break
+
+            pviz.set_description(
+                desc=f"Epoch [{epoch}/{num_epochs}], Trainloss: {train_loss}, ValLoss: {val_loss}"
+            )
+
         self.model_train_record.append(
             {
                 "epoch": int(epoch),
@@ -142,18 +194,84 @@ class VideoEmbedder(): #ElasticWeightConsolidation):
         )
         return epoch, loss
 
+    def latent_trajectory(self, dataloader: DataLoader = None):
+        assert isinstance(dataloader, DataLoader), f"Invalid dataloader: {dataloader}, {type(dataloader)}"
+
+        self.model.eval()
+
+        latent_traj = []
+        for data in dataloader:
+            input_batch = data[0][:, 0, :, :].unsqueeze(1)
+            output = self.model.encoder(input_batch)
+            latent_traj.append(output.cpu().detach().numpy())
+
+        latent_traj = np.concatenate(latent_traj, axis=0)
+        return latent_traj
+
+    def visualize_latent_trajectory(self, latent_traj, labels=None, perplexity=30):
+        """Visualize the latent trajectory using t-SNE"""
+        from sklearn.manifold import TSNE
+        from sklearn.decomposition import PCA
+
+
+        tsne = TSNE(n_components=2, perplexity=perplexity, n_iter=1000, random_state=42)
+        latent_2d = tsne.fit_transform(latent_traj)
+
+        pca = PCA(n_components=2)
+        latent_2d_pca = pca.fit_transform(latent_traj)
+        print(f"Explained variance ratio (PCA): {pca.explained_variance_ratio_}")
+        print(f"Explained variance (PCA): {pca.explained_variance_}")
+        print(f"Explained variance ratio (t-SNE): {tsne.kl_divergence_}")
+        print(f"Explained variance (t-SNE): {tsne.kl_divergence_}")
+        print(f"t-SNE perplexity: {perplexity}")
+        print(f"t-SNE n_iter: {1000}")
+        print(f"t-SNE random_state: {42}")
+
+        # plot the pca trajectory
+        plt.figure(figsize=(10, 8))
+        plt.scatter(
+            latent_2d_pca[:, 0],
+            latent_2d_pca[:, 1],
+            c=labels if labels is not None else "blue",
+            cmap="viridis",
+            alpha=0.7,
+        )
+        if labels is not None and len(np.unique(labels)) < 20:
+            plt.colorbar(label="State/Pose Category")
+        plt.title("PCA Visualization of Latent Space")
+        plt.xlabel("Dimension 1")
+        plt.ylabel("Dimension 2")
+        plt.tight_layout()
+        plt.savefig("pca_latent_space.png", dpi=300)
+
+        # Plot the results
+        plt.figure(figsize=(10, 8))
+        scatter = plt.scatter(
+            latent_2d[:, 0],
+            latent_2d[:, 1],
+            c=labels if labels is not None else "blue",
+            cmap="viridis",
+            alpha=0.7,
+        )
+
+        if labels is not None and len(np.unique(labels)) < 20:
+            plt.colorbar(scatter, label="State/Pose Category")
+
+        plt.title("t-SNE Visualization of Latent Space")
+        plt.xlabel("Dimension 1")
+        plt.ylabel("Dimension 2")
+        plt.tight_layout()
+        plt.savefig("tsne_latent_space.png", dpi=300)
+
     def create_video(self, dataloader: DataLoader = None):
-        if dataloader is not None:
-            self.dataloader = dataloader
-        assert isinstance(
-            self.dataloader, DataLoader
-        ), f"Invalid dataloader: {self.dataloader}, {type(self.dataloader)}"
-        
+        assert isinstance(dataloader, DataLoader), f"Invalid dataloader: {dataloader}, {type(dataloader)}"
+
         self.model.eval()
 
         reconstructed_images = []
-        for data in self.dataloader:
-            output = self.model(data[0])
+        for data in dataloader:
+            input_batch = data[0][:, 0, :, :].unsqueeze(1)
+            output = self.model(input_batch)
             reconstructed_images.append(output.cpu().detach().numpy())
         
         
@@ -190,28 +308,6 @@ class VideoEmbedder(): #ElasticWeightConsolidation):
         # Release the video writer and close the output file
         video_writer.release()
 
-    def visulize_video(self, images):
-        print("Lantent space projection")
-        # Convert NumPy array to a PyTorch tensor
-
-        for image in images:
-            tensor_image = torch.tensor(image, dtype=torch.float32)
-            tensor_image = tensor_image.cuda()
-            tensor_image = tensor_image.unsqueeze(0).unsqueeze(0)
-            latent_traj = self.model.encoder(tensor_image)
-
-            print(latent_traj.cpu().detach().numpy())
-            # image = (image * 255).astype(np.uint8)
-
-            decoded_image = (
-                self.model.forward(tensor_image).cpu().detach().numpy()[0][0]
-            )
-            image = (decoded_image).astype(np.uint8)
-            cv2.imshow("Video", image)
-            if cv2.waitKey(25) & 0xFF == 27:  # Press 'Esc' to exit
-                break
-        cv2.destroyAllWindows()
-
     def save_model(self):
         pathlib.Path(self.models_path).mkdir(
             parents=True, exist_ok=True
@@ -225,14 +321,16 @@ class VideoEmbedder(): #ElasticWeightConsolidation):
             f"{self.models_path}/{self.name}_{self.model.__class__.__name__}_{self.latent_dim}.pt",
         )  # save model
 
-    def load_model(self):
-        print(
-            f"Loading model: {self.models_path}/{self.name}_{self.model.__class__.__name__}_{self.latent_dim}.pt"
-        )
+    def load_model(self, path: pathlib.Path = None):
+        if path is None:
+            path = pathlib.Path(f"{self.models_path}/{self.name}_{self.model.__class__.__name__}_{self.latent_dim}.pt")
+        else:
+            assert path.exists(), f"Path {path} does not exist"
+            assert path.is_file(), f"Path {path} is not a file"
 
-        state_dict = torch.load(
-            f"{self.models_path}/{self.name}_{self.model.__class__.__name__}_{self.latent_dim}.pt"
-        )
+        print(f"Loading model: {str(path)}")
+
+        state_dict = torch.load(str(path))
 
         # fisher and old params are saves as registered_buffer and not loaded as load_state_dict
         delete_params = []

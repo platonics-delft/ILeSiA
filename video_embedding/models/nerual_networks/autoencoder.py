@@ -136,6 +136,60 @@ class Autoencoder2(nn.Module):
         z = self.encoder(x)
         x_reconstructed = self.decoder(z)
         return x_reconstructed
+    
+class Autoencoder3(nn.Module):
+    def __init__(self, latent_dim: int = 12):
+        super(Autoencoder3, self).__init__()  # Fixed class name
+
+        # Encoder with dropout
+        self.encoder = nn.Sequential(
+            nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Dropout2d(0.1),  # Added
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            
+            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.Dropout2d(0.05),  # Added
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            
+            nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+            nn.Dropout2d(0.05),  # Added
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            
+            nn.Flatten(),
+            nn.Linear(256 * 8 * 8, latent_dim),
+            nn.Dropout(0.02)  # Added after linear layer
+        )
+        
+        # Decoder with dropout
+        self.decoder = nn.Sequential(
+            nn.Linear(latent_dim, 256 * 8 * 8),
+            nn.Dropout(0.02),  # Added
+            nn.Unflatten(1, (256, 8, 8)),
+            
+            nn.ConvTranspose2d(256, 128, kernel_size=3, stride=2, padding=1, output_padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.Dropout2d(0.05),  # Added
+            
+            nn.ConvTranspose2d(128, 64, kernel_size=3, stride=2, padding=1, output_padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Dropout2d(0.1),  # Added
+            
+            nn.ConvTranspose2d(64, 1, kernel_size=3, stride=2, padding=1, output_padding=1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        z = self.encoder(x)
+        x_reconstructed = self.decoder(z)
+        return x_reconstructed
 
 class LargeAutoencoder(nn.Module):
     def __init__(self, latent_dim=10):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import cv2
 from video_embedding.models.video_embedder import VideoEmbedder
-from video_embedding.utils import clip_samples, get_session, set_session, tensor_image_to_cv2, visulize_video, load
+from video_embedding.utils import clip_samples, get_session, set_session, tensor_image_to_cv2, load
 import argparse
 import numpy as np
 
