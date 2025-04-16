@@ -37,22 +37,6 @@ def run_final_benchmarks(
     train_dataloader = D.load_dataloader(all_trial_names(skill_name), video_embedder, video_embedder.batch_size, framedrop_policy, features, add_whiteblackimg=add_whiteblackimg)
     test_dataloader = D.load_dataloader(all_test_names(skill_name), video_embedder, video_embedder.batch_size, framedrop_policy, features, add_whiteblackimg=add_whiteblackimg)
 
-    if False: # scaling
-        # from sklearn.preprocessing import StandardScaler
-        # print([(X[:,i].mean(), X[:,i].std()) for i in range(13)])
-
-        for i in range(12):
-            mean = torch.hstack((train_dataloader.dataset.X[:,i], test_dataloader.dataset.X[:,i])).mean()
-            std = torch.hstack((train_dataloader.dataset.X[:,i], test_dataloader.dataset.X[:,i])).std()
-
-            train_dataloader.dataset.X[:,i] = (train_dataloader.dataset.X[:,i] - mean) / std
-            test_dataloader.dataset.X[:,i] = (test_dataloader.dataset.X[:,i] - mean) / std
-
-        print([(train_dataloader.dataset.X[:,i].mean(), train_dataloader.dataset.X[:,i].std()) for i in range(13)])
-
-        # scaler_x = StandardScaler().fit(X[:,:-1])
-        # X[:,:-1] = scaler_x.transform(X[:,:-1])
-
     # optional, view accuracy on these validation dataloaders
     risk_estimator.set_dataloaders_for_validation([
         test_dataloader, 
@@ -66,9 +50,9 @@ def run_final_benchmarks(
 
     benchmark_eval_save("Train_dataset", skill_name, train_dataloader.dataset, video_embedder, risk_estimator)
     benchmark_eval_save("Test_dataset", skill_name, test_dataloader.dataset, video_embedder, risk_estimator)
-
     # Additional no drop eval
-    # nds_train_dataset, nds_test_dataset = D.extended_load(train_dataset.video_names, test_dataset.video_names, video_embedder, NoFrameDroppingPolicy, features, resnet_type_risk_estimator)
+    # train_dataloader = D.load_dataloader(all_trial_names(skill_name), video_embedder, video_embedder.batch_size, NoFrameDroppingPolicy, features, add_whiteblackimg=add_whiteblackimg)
+    # test_dataloader = D.load_dataloader(all_test_names(skill_name), video_embedder, video_embedder.batch_size, NoFrameDroppingPolicy, features, add_whiteblackimg=add_whiteblackimg)
     # benchmark_eval_save("NoDrop_Prior_is_Safe", skill_name, nds_train_dataset, video_embedder, risk_estimator)
     
     for video_name in train_dataloader.dataset.video_names + test_dataloader.dataset.video_names:
@@ -88,7 +72,7 @@ mapping = {
 
 skills = [
     "peg_pick404", 
-    # "peg_door404", 
+    "peg_door404", 
     # "peg_place404", 
     # "slider_move404", 
     # "slider_move404_2", # has better alignment between train and test trajectory data
@@ -99,24 +83,20 @@ skills = [
 approaches = [
     # 'LR',
     # 'MLP',
-    'MLP2',
+    # 'MLP2',
     # 'GP',
-    # 'TwinGP',
+    'TwinGP',
 ]
+framedrop_policy = f"OnlyLabelledFramesDroppingPolicy"
 filter_samples_to_label_areas = False
 add_whiteblackimg = True
+set_session("AE3")
 
-
+data_scaling = False
 
 for skill_name in skills:
     for approach in approaches:
-        # set_session("quantitative_study")
-        set_session("AE3")
-        if filter_samples_to_label_areas:
-            framedrop_policy = f"OnlyLabelledFramesDroppingPolicyRisk{mapping[skill_name]}"
-        else:
-            framedrop_policy = f"OnlyLabelledFramesDroppingPolicy"
-        # framedrop_policy = f"NoFrameDroppingPolicy"
+        if filter_samples_to_label_areas: framedrop_policy += f"Risk{mapping[skill_name]}"
         run_final_benchmarks(
             skill_name=skill_name,
             video_latent_dim=12,

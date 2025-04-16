@@ -27,6 +27,25 @@ def skill_framedropping(data, filepath):
                 data.loc[i, 'SafeTrue'] = 0.0 
     return data
 
+def find_extremes(data_series, number_of_extreemes=6):
+    chunks = np.array_split(data_series, number_of_extreemes)
+
+    # Alternate between picking max and min from each chunk
+    extreme_indices = []
+    start_idx = 0
+    for i, chunk in enumerate(chunks):
+        if i % 2 == 0:
+            # max
+            local_idx = np.argmax(chunk)
+        else:
+            # min
+            local_idx = np.argmin(chunk)
+        
+        global_idx = start_idx + local_idx
+        extreme_indices.append(global_idx)
+        start_idx += len(chunk)
+    return extreme_indices
+
 def plotter(filepath, half = "", connection_line=True, series_enabled=True, training_frames_reduced=False, title_enabled=True, tau_=False, only_og_images=False):
     if "GP+L" in filepath:
         name = "Linear + $\mathcal{GP}$"
@@ -44,8 +63,8 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True, trai
     if training_frames_reduced:
         data = skill_framedropping(data, filepath)
 
+    h = (data.index[-1] // 2)
     if half != "":
-        h = (data.index[-1] // 2)
         if half == "left":
             # Frames numbers that are plotted in the figure
             # Right now tuned for two frames
@@ -58,8 +77,15 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True, trai
     else:
         frame_numbers = np.array(np.linspace(0, data.index[-1], 6), dtype=int)
     # frame_numbers = [200,265,370, 590,605, 650]
+    
+
     data['Risk'] = data['Risk'].astype(float)
     data['Correct'] = data['Correct'].astype(int)
+
+    frame_numbers = find_extremes(data['Risk'], number_of_extreemes=6)
+    
+    for i in range (h-2, h+2):
+        data.at[i, "Risk"] = data.loc[i-1:i+1, "Risk"].mean()
 
     cropped_frame = extract_image(filepath, frame_numbers, only_og_images)
     if cropped_frame is None:
@@ -228,7 +254,7 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True, trai
         labels.extend(['Ground Truth'])
 
 
-    legend = ax.legend(handles, labels, fontsize="xx-small", loc='lower left', handler_map={tuple: HandlerTuple(ndivide=None)})
+    legend = ax.legend(handles, labels, fontsize="xx-small", handler_map={tuple: HandlerTuple(ndivide=None)})
     legend.set_zorder(15)
 
     if title_enabled:
@@ -307,7 +333,7 @@ if __name__ == "__main__":
     # Put here the autogen (results forlder) for which you want to generate plots
     # e.g.
     import risk_estimation
-    root_dir = f"{risk_estimation.package_path}/risk_estimation/autogen/quantitative_study"
+    root_dir = f"{risk_estimation.package_path}/risk_estimation/autogen"
     # root_dir = "/home/petr/ilesia_ws/src/ILeSiA/risk_estimation/autogen/quantitative_study/peg_place404/peg_place404_test_0"
     print(root_dir)
     training_frames_reduced = False

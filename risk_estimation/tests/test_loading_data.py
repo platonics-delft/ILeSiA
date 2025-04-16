@@ -1,5 +1,5 @@
 from risk_estimation.datasets.frame_dropping import *
-from risk_estimation.datasets.risk_dataloader import RiskEstimationDataset
+from risk_estimation.datasets.risk_dataloader import RiskEstimationDataset as D
 from risk_estimation.datasets.risk_feature_extractor import *
 from risk_estimation.models.safety_layer import get_risk_estimator
 from video_embedding.models.video_embedder import VideoEmbedder
@@ -37,19 +37,9 @@ def test_loading(
         approach, skill_name, features.xdim(video_latent_dim), video_embedder, out_assessment, train_patience, train_epoch
     )
 
-    video_train_names = all_trial_names(skill_name)
+    train_dataloader = D.load_dataloader(all_trial_names(skill_name), video_embedder, video_embedder.batch_size, framedrop_policy, features)
+    test_dataloader = D.load_dataloader(all_test_names(skill_name), video_embedder, video_embedder.batch_size, framedrop_policy, features)
 
-    video_test_names = all_test_names(skill_name)
-
-
-
-    dataset_nodrop = RiskEstimationDataset.load_dataset(video_train_names, video_embedder,
-        frame_dropping_policy=NoFrameDroppingPolicy, features=features)
-
-    train_dataset, train_imgset, test_dataset, test_imgset = RiskEstimationDataset.extended_load(
-        video_train_names, video_test_names, video_embedder, 
-        framedrop_policy, features,
-    )
 
 
 

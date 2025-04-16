@@ -145,7 +145,7 @@ class GPRiskEstimator(RiskEstimatorBase):
                 output = self.model(X)
                 loss = -mll(output, Y)
 
-                if False:
+                if True:
                     self.model.eval()
                     self.likelihood.eval()
                     with torch.no_grad(), gpytorch.settings.fast_pred_var():

@@ -14,7 +14,7 @@ from video_embedding.image_processing import saved_img_processing
 
 
 class RiskEstimationDataset(Dataset):
-    def __init__(self, X, Y, imgs, batch_size: int = 40, has_label=None, transform=None, video_names=[]):
+    def __init__(self, X, Y, imgs, batch_size: int = 40, transform=None, video_names=[]):
         """
         Args:
             X (numpy array or torch Tensor): The input features.
@@ -31,7 +31,6 @@ class RiskEstimationDataset(Dataset):
         self.imgs = torch.tensor(imgs, dtype=torch.float32).cuda()
         self.video_names = video_names
         self.batch_size = batch_size
-        self.has_label = has_label
         self.transform = transform
 
     def to_dataloader(self):
@@ -51,101 +50,36 @@ class RiskEstimationDataset(Dataset):
 
     @staticmethod
     def load_video_data(name: str):
-        """
+        """ You give single video file name, it returns the extracted data
         Args:
             name (str): Name of demonstration (file)
 
         Returns:
-            torch.tensor: get tensor_images [x, 1, 64, 64]
-            risk_flag: risk flags [x,1]
-            safe_flag: safe flags [x,1]
-            novelty_flag: novelty flags [x,1]
-            frame_number: frame number arange [x,1]
-            recovery_phase: [x,1]
+            video_data (dict): Dictionary with keys:
+            img: np.array, images [x, 1, 64, 64]
+            risk_flag: np.array, risk flags [x,1]
+            safe_flag: np.array, safe flags [x,1]
+            novel_risk_flag: np.array, novel risk flags [x,1]
+            novel_safe_flag: np.array, novel safe flags [x,1]
+            frame_number: np.array, frame number [x,1]
         """
         data = load(file=name)
-        images = data["img"]
-        l = len(data["img"])
-        assert len(data["risk_flag"].T) == len(
-            data["img"]
-        ), f"Lens for {name} are not matching {len(data['risk_flag'].T)} != {len(data['img'])}"
-        try:
-            risk_flag = data["risk_flag"]
-        except KeyError:
-            risk_flag = np.zeros((1,len(images)))  # Setting to zeroes
-        try:
-            safe_flag = data["safe_flag"]
-        except KeyError:
-            safe_flag = np.zeros((1,len(images)))  # Setting to zeroes
-        try:
-            novelty_flag = data["novelty_flag"]
-        except KeyError:  # Loaded demonstration has no record of risk data
-            novelty_flag = np.zeros((1,len(images)))
-        try:
-            recovery_phase = data["recovery_phase"]
-        except KeyError:
-            recovery_phase = -1.0 * np.ones((1,len(images)))
+        
+        video_data = {
+            "frame_number": np.array([np.arange(len(data["img"])) / len(data["img"])]).T, 
+            "risk_flag": np.zeros((1,len(data["img"]))).T,
+            "safe_flag": np.zeros((1,len(data["img"]))).T,
+            "novel_risk_flag": np.zeros((1,len(data["img"]))).T,
+            "novel_safe_flag": np.zeros((1,len(data["img"]))).T,
+        }
+        # (num_images, h, w) -> (num_images, 1, h, w)
+        video_data["img"] = saved_img_processing(data["img"]).squeeze().unsqueeze(1).cpu().numpy()
+        if "risk_flag" in data: video_data["risk_flag"] = np.array([data["risk_flag"]]).T            
+        if "safe_flag" in data: video_data["safe_flag"] = np.array([data["safe_flag"]]).T
+        if "novel_risk_flag" in data: video_data["novel_risk_flag"] = np.array([data["novel_risk_flag"]]).T
+        if "novel_safe_flag" in data: video_data["novel_safe_flag"] = np.array([data["novel_safe_flag"]]).T
 
-        tensor_images = saved_img_processing(images).squeeze()
-        tensor_images = tensor_images.unsqueeze(1) # (num_images, h, w) -> (num_images, 1, h, w)
-
-        risk_flag = torch.tensor(np.array([risk_flag]).T, dtype=torch.int).cuda()
-        safe_flag = torch.tensor(np.array([safe_flag]).T, dtype=torch.int).cuda()
-        novelty_flag = torch.tensor(np.array([novelty_flag]).T, dtype=torch.int).cuda()
-        recovery_phase = torch.tensor(np.array([recovery_phase]).T, dtype=torch.float32).cuda()
-
-        frame_number = torch.tensor(np.array([np.arange(l) / l]).T, dtype=torch.float32).cuda()
-
-        assert frame_number.shape[1] == 1 and len(frame_number.shape)==2, f"Shape: (X, 1) != {frame_number.shape}"
-        assert risk_flag.shape[1] == 1 and len(frame_number.shape)==2, f"Shape: (X, 1) != {risk_flag.shape}"
-        assert safe_flag.shape[1] == 1 and len(frame_number.shape)==2, f"Shape: (X, 1) != {safe_flag.shape}"
-        assert novelty_flag.shape[1] == 1 and len(frame_number.shape)==2, f"Shape: (X, 1) != {novelty_flag.shape}"
-        assert recovery_phase.shape[1] == 1, f"Shape: (X, 1) != {recovery_phase.shape}"
-
-        return tensor_images, risk_flag, safe_flag, novelty_flag, frame_number, recovery_phase
-
-    @classmethod
-    def load_videos_data_dataloaders(
-        cls, names: Iterable[str], batch_size: int, frame_dropping_policy
-    ):
-        """Set dataloaders (list) for multiple input video data
-        Args:
-            names (Iterable[str]): names of input videos to load
-            batch_size (int)
-            frame_dropping_policy (cls)
-
-        Returns:
-            Iterable[Dataloader]: Dataloader for each video name
-        """
-        dataloaders = []
-        # print(f"Loading dataloader from skills: {names}")
-        for name in names:
-            dataset = TensorDataset(
-                *frame_dropping_policy.filter_frames(cls.load_video_data(name))
-            )
-
-            if len(dataset) == 0:
-                continue  # no samples
-
-            dataloaders.append(
-                DataLoader(dataset, batch_size=batch_size, shuffle=False)
-            )
-        return dataloaders
-
-    @staticmethod
-    def dataloader_extract_to_array(
-        dataloader,
-        features=VideoObservationsRiskLabels,
-        video_embedder=None,
-    ):
-        X, Y = [], []
-
-        for datasample in dataloader:
-            x, y = features.extract(datasample, video_embedder)
-            X.append(x)
-            Y.append(y)
-
-        return torch.cat(X, dim=0), torch.cat(Y, dim=0)
+        return video_data
 
     @staticmethod
     def dataloader_to_array(dataloader):
@@ -167,38 +101,38 @@ class RiskEstimationDataset(Dataset):
         transform=None,
         add_whiteblackimg=False,
     ):
-        """Loads full dataset.
+        """ The main function to load the dataset from list of video names.
 
         Args:
             video_names (Iterable[str]): Video names used to collect the dataset
-            video_embedder (_type_): Needed to embed loaded videos
-            batch_size (int, optional): Defaults to 40.
-            frame_dropping_policy (cls, optional): Defaults to NoFrameDroppingPolicy.
-            features (classmethod, optional): _description_. Defaults to LatentObservationsRiskLabels.
+            video_embedder: Embeds videos into latent space
+            frame_dropping_policy (cls, optional): Discrads samples.
+            features (classmethod, optional): Look at risk_feature_extractor.py.
 
         Returns:
-            RiskEstimationDataset: X, e.g. 10 * 40 samples, 8 features each
-                                   Y, e.g. 10 * 40 labels
+            RiskEstimationDataset: X,Y - features and labels you choose based on features class
         """        
+        # 1. Frame drop
+        video_data_list = []
+        for name in video_names:
+            data = frame_dropping_policy.filter_frames(cls.load_video_data(name))
+            
+            if len(data["img"]) == 0:
+                continue  # no samples
+
+            video_data_list.append(data)
+        
+        # 2. Extract features
         X, Y, imgs = [], [], []
+        for data,video_name in zip(video_data_list, video_names):
+            x, y = features.extract(data, video_embedder, video_name)
 
-        dataloaders = cls.load_videos_data_dataloaders(
-            video_names, batch_size, frame_dropping_policy
-        )
-
-        for dataloader,video_name in zip(dataloaders, video_names):
-            for datasample in dataloader:
-                x, y = features.extract(datasample, video_embedder, video_name)
-
-                X.append(x.cpu().detach().numpy())
-                Y.append(y.cpu().detach().numpy())
-                imgs.append(datasample[0].cpu().detach().numpy())
+            X.append(x)
+            Y.append(y)
+            imgs.append(data["img"])
 
         if len(X) == 0:
             return RiskEstimationDataset([], [], [])
-
-        has_label = RiskEstimationDataset.has_sample_mask(dataloaders)
-
 
         if add_whiteblackimg: # Consider whole white and black images as risky
             ones = torch.ones((40,1,64,64)).cuda()
@@ -217,7 +151,7 @@ class RiskEstimationDataset(Dataset):
             Y.append(np.ones((40,1,1)))
             imgs.append(zeros.cpu().detach().numpy())
             
-        return RiskEstimationDataset(np.vstack(X), np.vstack(Y), np.vstack(imgs), batch_size, has_label=has_label, transform=transform, video_names=video_names)
+        return RiskEstimationDataset(np.vstack(X), np.vstack(Y), np.vstack(imgs), batch_size, transform=transform, video_names=video_names)
 
     @classmethod
     def load_dataloader(cls,
@@ -229,59 +163,10 @@ class RiskEstimationDataset(Dataset):
             transform=None,
             add_whiteblackimg=False,
         ):
+        """ Wrapper to get DataLoader instead of dataset
+        """
         return DataLoader(cls.load_dataset(video_names, video_embedder, batch_size, frame_dropping_policy, features, transform,add_whiteblackimg=add_whiteblackimg), batch_size=video_embedder.batch_size)
 
-    @classmethod
-    def load(
-        cls,
-        video_names: Iterable[str],
-        video_embedder: VideoEmbedder,
-        batch_size: int = 40,
-        frame_dropping_policy=NoFrameDroppingPolicy,
-        features=LatentObservationsRiskLabels,
-        transform=None,
-    ) -> Tuple[DataLoader, DataLoader]:
-        raise Exception("deprecated")
-        """Loads Risk Estimator's split train and test datasets as dataloaders
-
-        Args:
-            video_names (Iterable[str]): Video names used to collect the dataset
-            video_embedder (VideoEmbedder): Needed to embed loaded videos
-            batch_size (int, optional): Defaults to 40.
-            frame_dropping_policy (cls, optional): Defaults to NoFrameDroppingPolicy.
-            features (classmethod, optional): Defaults to LatentObservationsRiskLabels.
-
-        Returns:
-            Tuple[DataLoader, DataLoader]: Train and test dataloaders
-        """
-        dataset = cls.load_dataset(video_names, video_embedder, batch_size, frame_dropping_policy, features, transform)
-
-        train_idx, test_idx = train_test_split(
-            range(len(dataset)), test_size=0.2, random_state=42
-        )
-
-        train_subset = Subset(dataset, train_idx)
-        test_subset = Subset(dataset, test_idx)
-
-        # Create DataLoader
-        train_dataloader = DataLoader(train_subset, batch_size=batch_size, shuffle=True)
-        test_dataloader = DataLoader(test_subset, batch_size=batch_size, shuffle=False)
-        return train_dataloader, test_dataloader
-
-    @staticmethod
-    def has_sample_mask(dataloaders, traj_len: int = 400):
-        has_sample = np.zeros((traj_len), dtype=bool)
-        
-        for dataloader in dataloaders:
-            for datasample in dataloader:
-                framedata = datasample[4]
-                for frame in framedata:
-                    norm_frame = frame # time-frame
-                    idx = int(norm_frame * traj_len)
-
-                    has_sample[idx] = True
-
-        return has_sample
     
     resnet_transform = torchvision.transforms.Compose([
             torchvision.transforms.Grayscale(num_output_channels=3),
@@ -291,24 +176,3 @@ class RiskEstimationDataset(Dataset):
             torchvision.transforms.Normalize(mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225]),
         ])
     transform = None
-
-    @classmethod
-    def extended_load(cls, video_train_names, video_test_names, video_embedder, framedrop_policy, features, resnet_option=False):
-        
-        train_dataset = cls.load_dataset(video_train_names,
-                                         video_embedder, 
-                                         video_embedder.batch_size, 
-                                         framedrop_policy, 
-                                         features, 
-                                         cls.transform
-        )
-        
-        if resnet_option:
-            test_dataset = cls.load_dataset(video_test_names, video_embedder, video_embedder.batch_size, frame_dropping_policy=framedrop_policy, features=VideoObservationsRiskLabels,
-            transform=cls.resnet_transform)
-        else:
-            test_dataset = cls.load_dataset(video_test_names, video_embedder, video_embedder.batch_size, framedrop_policy, features, cls.transform)
-        
-        return train_dataset, test_dataset
-    
-        

@@ -3,7 +3,7 @@ from video_embedding.utils import set_session
 from torch.utils.data import DataLoader
 from risk_estimation.models.safety_layer import get_risk_estimator
 from risk_estimation.datasets.frame_dropping import NoFrameDroppingPolicy
-from risk_estimation.datasets.risk_dataloader import RiskEstimationDataset
+from risk_estimation.datasets.risk_dataloader import RiskEstimationDataset as D
 from risk_estimation.datasets.risk_feature_extractor import *
 from risk_estimation.datasets.frame_dropping import *
 from risk_estimation.result_evaluator import benchmark_eval_save
@@ -30,10 +30,9 @@ def run_resnet_benchmarks(
     if isinstance(framedrop_policy, str):
         framedrop_policy = eval(framedrop_policy)
     
-    resnet_type_risk_estimator = ('resnet' in approach)
     resnet_type_embedding_approach = ("Resnet" in embedding_approach)
-    if resnet_type_risk_estimator:
-        features=eval("Resnet"+features().__class__.__name__)
+    
+    features=eval("Resnet"+features().__class__.__name__)
 
     video_embedder = VideoEmbedder(
         name=skill_name,
@@ -48,38 +47,30 @@ def run_resnet_benchmarks(
         approach, skill_name, features.xdim(video_latent_dim), video_embedder, out_assessment, train_patience, train_epoch
     )
 
-    dataset_nodrop = RiskEstimationDataset.load_dataset(all_trial_names(skill_name), video_embedder,
-        frame_dropping_policy=NoFrameDroppingPolicy, features=features)
-
-
-    train_dataset, test_dataset = RiskEstimationDataset.extended_load(
-        all_trial_names(skill_name), all_test_names(skill_name), video_embedder, 
-        framedrop_policy, features, resnet_option=resnet_type_risk_estimator
-    )
-    print("video_train_names: ", train_dataset.video_names, " video_test_names: ", test_dataset.video_names)
-
+    train_dataloader = D.load_dataloader(all_trial_names(skill_name), video_embedder, video_embedder.batch_size, framedrop_policy, features, add_whiteblackimg=False, transform=D.resnet_transform)
+    test_dataloader = D.load_dataloader(all_test_names(skill_name), video_embedder, video_embedder.batch_size, framedrop_policy, features, add_whiteblackimg=False, transform=D.resnet_transform)
+    
     # optional, not aligned with other dataloaders
-    risk_estimator.set_dataloaders_for_validation(test_dataset, dataset_nodrop)
+    risk_estimator.set_dataloaders_for_validation([test_dataloader, 
+        D.load_dataloader(all_trial_names(skill_name), video_embedder,frame_dropping_policy=NoFrameDroppingPolicy, features=features)
+        ], names=["test", "nodrop"])
 
-    risk_estimator.training_loop(DataLoader(train_dataset, batch_size=video_embedder.batch_size), early_stop=True)
+    risk_estimator.training_loop(train_dataloader, early_stop=True)
     risk_estimator.save_model()
     # risk_estimator.load_model()
 
 
-    benchmark_eval_save("Train_dataset", skill_name, train_dataset, video_embedder, risk_estimator)
-    benchmark_eval_save("Test_dataset", skill_name, test_dataset, video_embedder, risk_estimator)
+    benchmark_eval_save("Train_dataset", skill_name, train_dataloader.dataset, video_embedder, risk_estimator)
+    benchmark_eval_save("Test_dataset", skill_name, test_dataloader.dataset, video_embedder, risk_estimator)
 
     # Additional no drop eval
-    # nds_train_dataset, nds_test_dataset = RiskEstimationDataset.extended_load(train_dataset.video_names, test_dataset.video_names, video_embedder, NoFrameDroppingPolicy, features, resnet_type_risk_estimator)
-    # ndr_train_dataset, ndr_test_dataset = RiskEstimationDataset.extended_load(train_dataset.video_names, test_dataset.video_names, video_embedder, NoFrameDroppingPolicy, eval(features().__class__.__name__+"PriorRisk"), resnet_type_risk_estimator)
-
-    # benchmark_eval_save("NoDrop_Prior_is_Safe", skill_name, nds_train_dataset, video_embedder, risk_estimator)
-    # benchmark_eval_save("NoDrop_Prior_is_Risk", skill_name, ndr_train_dataset, video_embedder, risk_estimator)
+    no_drop_dataloader = D.load_dataloader(all_trial_names(skill_name), video_embedder, video_embedder.batch_size, NoFrameDroppingPolicy, features, add_whiteblackimg=False, transform=D.resnet_transform)
+    benchmark_eval_save("NoDrop_Prior_is_Safe", skill_name, no_drop_dataloader.dataset, video_embedder, risk_estimator)
 
     
-    for video_name in train_dataset.video_names + test_dataset.video_names:
+    for video_name in train_dataloader.dataset.video_names + test_dataloader.dataset.video_names:
         sample_and_save_on_video(video_name, video_embedder, risk_estimator, features, 
-                                 DataLoader(train_dataset, batch_size=video_embedder.batch_size), folder="autogen")
+                                 train_dataloader, folder="autogen")
         if save_video_flag and not resnet_type_embedding_approach:
             video_triplets_save(video_name, video_embedder, folder="autogen")
 

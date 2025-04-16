@@ -130,15 +130,7 @@ def sample_and_save_on_video(video_name: str, video_embedder, risk_estimator, fe
     safe_labels = safe_labels.Y.cpu().numpy().squeeze()
     risk_labels = dataset.Y.cpu().numpy().squeeze()
 
-    if isinstance(train_dataloader, type(None)):
-        has_label = np.zeros((len(correct)))
-    else:
-        try:
-            has_label = train_dataloader.dataset.dataset.has_label # len 400
-        except AttributeError:
-            has_label = train_dataloader.dataset.has_label
-        has_label = interp(has_label, len(correct)) # len adjusted to current video
-
+    has_label = np.ones(len(risks))
 
     df = pd.DataFrame(np.array([risks, correct, safe_labels, risk_labels, has_label, std]).T, columns=['Risk', 'Correct', 'SafeTrue', 'RiskTrue', 'HasLabel', 'Std'])
     df.to_csv(f"{path}/{video_name}_{risk_estimator.encode_params_as_str()}.csv", index_label='Time')
