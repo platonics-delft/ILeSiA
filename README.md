@@ -85,6 +85,14 @@ To make all plots python, run:
 python /ILeSiA/risk_estimation/scripts/plotter.py 
 ```
 
+### Do DAgger experiment:
+
+```
+python3 simulating_real_experiment.py --video peg_pick404
+```
+
+This generates plots.
+
 #### Usage
 
 1. Unlock robot & enable FCI
@@ -129,24 +137,10 @@ If you're not happy with the labelling, label manually
 rosrun risk_estimation label_video_manually.py --video super_skill
 ```
 
-
-Manual train and evaluate labelled demonstration data of given skill with:
-```Shell
-rosrun risk_estimation train_markovian_risk_classifier.py --skill_name super_skill
-```
-
 Examine all dataset images
 ```Shell
 python3 view_dataset_images.py --video super_skill
 ```
-
-Out-of-distribution check for Distance Risk Estimator: 
-```Shell
-python3 ood_check.py --video peg_door_trial_0 --video_test peg_door_trial_1
-```
-
-Compares $h_{test}$ with representation one $h_{repr}$
-Out-of-distribution check for GP Risk Estimator
 
 # Old Demo session with Robothon Box
 

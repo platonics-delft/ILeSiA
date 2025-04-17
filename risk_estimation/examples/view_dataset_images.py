@@ -1,70 +1,48 @@
-
-from risk_estimation.datasets.frame_dropping import *
-from risk_estimation.datasets.risk_dataloader import RiskEstimationDataset
-from risk_estimation.datasets.risk_feature_extractor import *
-from video_embedding.models.video_embedder import VideoEmbedder
-from video_embedding.utils import all_trial_names, clip_samples, number_of_saved_trials, set_session, tensor_image_to_cv2, visulize_video, load, visualize_labelled_video
+#!/usr/bin/env python3
+import cv2
+from video_embedding.models.video_embedding_dataset import load_dataloader
+from video_embedding.utils import set_session, tensor_image_to_cv2, load
 import argparse
 
-# skill_manager Python package needs to be installed correctly, then:
-from skills_manager.feedback import RiskAwareFeedback
-
-def main(args):
-    set_session(args.session)
-    # for k in data.keys():
-    #     print(f"{k}: {data[k].shape}")
-    #     print(data[k])
-    # print(len(images))
-    # visulize_video(images)
-    # data = clip_samples(data)
-    # if input("Save cropped video? (y)") == 'y':
-    #     save(data, file=args.video)
+def label_video(args):
+    set_session(args['session'])
+    data = dict(load(file=args['video']))
     
-    video_embedder = VideoEmbedder(name=args.video, latent_dim=args.latent_dim)
-    video_names = all_trial_names(args.video, include_repr=True)
-    video_embedder.load(video_names)
-    video_embedder.load_model()
+    dataloader = load_dataloader(args['video'], batch_size=64)
+    tensor_images = dataloader.dataset.tensors[0][:, 0:1, :, :]
 
-    dataset = RiskEstimationDataset.load_dataset(video_names, video_embedder, frame_dropping_policy=NoFrameDroppingPolicy, features=VideoObservationsRiskAndSafeLabels)
-    print(dataset.X.shape)
+    for n, image in enumerate(tensor_images):
+        
+        if data['risk_flag'][0][n]:
+            risk_label = 'R'
+        elif data['safe_flag'][0][n]:
+            risk_label = 'S'
+        else:
+            risk_label = ''
+        
+        if data['novel_risk_flag'][0][n]:
+            novelty_label = 'Nov R'
+        elif data['novel_safe_flag'][0][n]:
+            novelty_label = 'Nov S'
+        else:
+            novelty_label = ''
 
-    # Each video marked as separate
-    for video_name in video_names:
-        print(f"New Video: {video_name}")
-        dataset = RiskEstimationDataset.load_dataset([video_name], video_embedder, frame_dropping_policy=OnlyLabelledFramesDroppingPolicy, features=VideoObservationsRiskAndSafeLabels)
-        print(dataset.X.shape)
+        img = tensor_image_to_cv2(image)
+        cv2.putText(img, risk_label, (0, 12), cv2.FONT_HERSHEY_SIMPLEX,
+            0.5, (255, 0, 0), 1, 2)
+        cv2.putText(img, novelty_label, (0, 62), cv2.FONT_HERSHEY_SIMPLEX,
+            0.5, (255, 0, 0), 1, 2)
 
-        labels = {
-            'risk_flag': dataset.Y.cpu().numpy()[:,0],
-            'safe_flag': dataset.Y.cpu().numpy()[:,1],
-        }
-
-        # dataset has embedded video images
-        visualize_labelled_video(dataset.X.cpu().numpy(), labels = labels, press_for_next_frame=True, printer=True)
-
-    return
-    # All in once
-    dataset = RiskEstimationDataset.load_dataset(video_names, video_embedder, frame_dropping_policy=OnlyLabelledFramesDroppingPolicy, features=VideoObservationsRiskAndSafeLabels)
-    print(dataset.X.shape)
-
-    labels = {
-        'risk_flag': dataset.Y.cpu().numpy()[:,0],
-        'safe_flag': dataset.Y.cpu().numpy()[:,1],
-    }
-
-    # dataset has embedded video images
-    visualize_labelled_video(dataset.X.cpu().numpy(), labels = labels, press_for_next_frame=True, printer=True)
-
-
-
+        cv2.namedWindow("Image", cv2.WINDOW_NORMAL)
+        cv2.resizeWindow("Image", 640, 640)
+        zoomed_image = cv2.resize(img, (640, 640), interpolation=cv2.INTER_NEAREST)
+        cv2.imshow("Image", zoomed_image)
+        if cv2.waitKey(25) & 0xFF == 27:  # Press 'Esc' to exit
+            break
+        # cv2.waitKey(0)  # Wait for a key press to close the window
+        
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        prog="Play video",
-        description="",
-        epilog="",
-    )
-    parser.add_argument("--video", default="peg_pick")
-    parser.add_argument("--session", default="")
-    parser.add_argument("--latent_dim", default=16)
-
-    main(parser.parse_args())
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--video", type=str, default="peg_pick404")
+    parser.add_argument("--session", default="quantitative_study")
+    label_video(vars(parser.parse_args()))
