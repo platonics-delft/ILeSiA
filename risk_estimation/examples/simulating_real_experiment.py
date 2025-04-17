@@ -60,9 +60,17 @@ def main(args):
         saved_logs["tp_novel"].append(e_novel.tp)
     real_exp_plot(saved_logs)
 
+# Define consistent colors for each component
+colors = {
+    'TN': '#1f77b4',  # Blue
+    'FP': '#ff7f0e',  # Orange
+    'FN': '#2ca02c',  # Green
+    'TP': '#d62728'   # Red
+}
+
 def real_exp_plot(d):
     # --- Plot 1: Accuracy Curves ---
-    plt.figure()
+    plt.figure(figsize=(5, 3))
     plt.plot(d['n_executions'], d['acc_test'], marker='o', label='Test Accuracy')
     plt.plot(d['n_executions'], d['acc_novel'], marker='o', label='Novel Accuracy')
     plt.xlabel('Number of Executions in Training')
@@ -82,16 +90,16 @@ def real_exp_plot(d):
     # Plot 2: Improved Stacked Bar Chart with Combined Legend
     plt.figure(figsize=(5, 3))
     # Plotting Test Dataset Bars
-    bar_test_tn = plt.bar(x - width/2, d['tn_test'], width)
-    bar_test_fp = plt.bar(x - width/2, d['fp_test'], width, bottom=d['tn_test'])
-    bar_test_fn = plt.bar(x - width/2, d['fn_test'], width, bottom=np.array(d['tn_test'])+np.array(d['fp_test']))
-    bar_test_tp = plt.bar(x - width/2, d['tp_test'], width, bottom=np.array(d['tn_test'])+np.array(d['fp_test'])+np.array(d['fn_test']))
+    bar_test_tn = plt.bar(x - width/2, d['tn_test'], width, color=colors['TN'])
+    bar_test_fp = plt.bar(x - width/2, d['fp_test'], width, bottom=d['tn_test'], color=colors['FP'])
+    bar_test_fn = plt.bar(x - width/2, d['fn_test'], width, bottom=np.array(d['tn_test'])+np.array(d['fp_test']), color=colors['FN'])
+    bar_test_tp = plt.bar(x - width/2, d['tp_test'], width, bottom=np.array(d['tn_test'])+np.array(d['fp_test'])+np.array(d['fn_test']), color=colors['TP'])
 
     # Plotting Novel Dataset Bars
-    plt.bar(x + width/2, d['tn_novel'], width)
-    plt.bar(x + width/2, d['fp_novel'], width, bottom=d['tn_novel'])
-    plt.bar(x + width/2, d['fn_novel'], width, bottom=np.array(d['tn_novel'])+np.array(d['fp_novel']))
-    plt.bar(x + width/2, d['tp_novel'], width, bottom=np.array(d['tn_novel'])+np.array(d['fp_novel'])+np.array(d['fn_novel']))
+    plt.bar(x + width/2, d['tn_novel'], width, color=colors['TN'])
+    plt.bar(x + width/2, d['fp_novel'], width, bottom=d['tn_novel'], color=colors['FP'])
+    plt.bar(x + width/2, d['fn_novel'], width, bottom=np.array(d['tn_novel'])+np.array(d['fp_novel']), color=colors['FN'])
+    plt.bar(x + width/2, d['tp_novel'], width, bottom=np.array(d['tn_novel'])+np.array(d['fp_novel'])+np.array(d['fn_novel']), color=colors['TP'])
 
     # Creating unified legend for the components only
     legend_labels = ['TN', 'FP', 'FN', 'TP']
@@ -111,7 +119,6 @@ def real_exp_plot(d):
     plt.grid(True, axis='y', linestyle='--', alpha=0.7)
     plt.savefig("confusion_matrix_components.pdf")
     plt.show()
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
