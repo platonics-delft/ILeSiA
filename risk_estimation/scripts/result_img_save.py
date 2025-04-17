@@ -38,7 +38,7 @@ def get_image_triplet(
     for idx in range(len(images_numpy)):
         original_image = tensor_image_to_cv2(images_cuda[idx:idx+1])
 
-        decoded_img1 = video_embedder.model.forward_batched(images_cuda[idx:idx+1])
+        decoded_img1 = video_embedder.model.bforward(images_cuda[idx:idx+1])
         cr_ = criterion(decoded_img1, images_cuda[idx:idx+1])
 
         decoded_img = tensor_image_to_cv2(decoded_img1)

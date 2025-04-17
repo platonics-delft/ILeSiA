@@ -8,7 +8,7 @@ import numpy as np
 from video_embedding.utils import visualize_labelled_video
 from risk_estimation.scripts.pretty_confusion_matrix import pp_matrix_from_data
 import risk_estimation
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, confusion_matrix
 
 from video_embedding.utils import get_session
 
@@ -35,6 +35,19 @@ def benchmark_eval_save(
     e = ResultEvaluator(name=f"{title}_{risk_estimator.encode_params_as_str()}", savepath=path, iwanttosee=["accuracy"])
     e(risk_estimator, video_embedder, dataset.X, dataset.Y, dataset.imgs, dataset.imgs)
 
+def benchmark_eval(
+        title,
+        skill_name,
+        dataset,
+        video_embedder,
+        risk_estimator,
+    ):
+    path = f"{risk_estimation.path}/autogen/{get_session()}/{skill_name}/"
+
+    e = ResultEvaluator(name=f"{title}_{risk_estimator.encode_params_as_str()}", savepath=path, iwanttosave=[], iwanttosee=["accuracy"])
+    e(risk_estimator, video_embedder, dataset.X, dataset.Y, dataset.imgs, dataset.imgs)
+    return e
+
 class ResultEvaluator():
     
     def __init__(self, 
@@ -51,6 +64,10 @@ class ResultEvaluator():
         self.iwanttosave = iwanttosave
         self.name = name
         self.savepath = savepath
+
+    @property
+    def savepath_ext(self):
+        return " ".join(self.savepath.split("/")[-3:])
 
     def to_cpu(self, Y_test):
         Y_test = Y_test.cpu().numpy().squeeze()
@@ -89,18 +106,20 @@ class ResultEvaluator():
         if "image_triplets" in self.iwanttosave:
             raise NotImplementedError
         
+        self.compute_acc_and_cf(Y_test, Y_pred)
+
         return self.return_wrong_samples(Y_test, Y_pred)
-        
+    
+    def compute_acc_and_cf(self, Y_test, Y_pred):
+        self.acc_score = 100 * (Y_test == Y_pred).mean()
+        self.tn, self.fp, self.fn, self.tp = confusion_matrix(Y_test, Y_pred).ravel()
 
     def return_wrong_samples(self, Y_test, Y_pred):
         return f"{sum(Y_test != Y_pred)}/{len(Y_test)}"
         
     def acc(self, Y_test, Y_pred):
-        print("======")
-        print(f"Datasamples: {len(Y_test)}, Risky: {len(Y_test[Y_test==1])}, Safe: {len(Y_test[Y_test==0])}")
         acc = 100 * (Y_test == Y_pred).mean()
-        print(f"Accuracy: {cc.OKGREEN}{self.savepath} {acc}{cc.E}")
-        print("======")
+        print(f"The {cc.OKGREEN}{self.savepath_ext} {self.name}{cc.E} has {cc.OKGREEN}{round(acc, 1)}%{cc.E} Samples: {len(Y_test)}, Risky: {len(Y_test[Y_test==1])}, Safe: {len(Y_test[Y_test==0])}")
 
     def acc_save(self, Y_test, Y_pred):
         acc = 100 * (Y_test == Y_pred).mean()

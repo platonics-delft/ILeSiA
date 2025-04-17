@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 import cv2
 from video_embedding.models.video_embedding_dataset import load_dataloader
-from video_embedding.utils import clip_samples, get_session, set_session, tensor_image_to_cv2, load
+from video_embedding.utils import get_session, set_session, tensor_image_to_cv2, load, get_trajectory_path
 import argparse
 import numpy as np
 
 # skill_manager Python package needs to be installed correctly, then:
 # from skills_manager.scripts.feedback import Feedback
 from skills_manager.feedback import RiskAwareFeedback
-from video_embedding.utils import get_trajectory_path
 
 def save(self, file='last'):
     np.savez(f"{get_trajectory_path()}/trajectories/{get_session()}/{file}.npz",
@@ -30,68 +29,65 @@ def label_video(args):
     
     # Create VideoEmbedder, assign name, load model and data
     dataloader = load_dataloader(args['video'], batch_size=64)
-    video_embedder = VideoEmbedder(latent_dim=12)
-    video_embedder.name = args['video']
-    video_embedder.load(name=args['video'])
-
+    tensor_images = dataloader.dataset.tensors[0][:, 0:1, :, :]
+    
     raf = RiskAwareFeedback()
 
-    risk_flag = np.zeros((len(video_embedder.tensor_images)))
-    safe_flag = np.zeros((len(video_embedder.tensor_images)))
-    novel_risk_flag = np.zeros((len(video_embedder.tensor_images)))
-    novel_safe_flag = np.zeros((len(video_embedder.tensor_images)))
-    spiral_flag = np.zeros((len(video_embedder.tensor_images)))
-    for n, image in enumerate(video_embedder.tensor_images):
-        image = video_embedder.tensor_images[n : n + 1]
+    risk_flag = np.zeros((len(tensor_images)))
+    safe_flag = np.zeros((len(tensor_images)))
+    novel_risk_flag = np.zeros((len(tensor_images)))
+    novel_safe_flag = np.zeros((len(tensor_images)))
+    spiral_flag = np.zeros((len(tensor_images)))
+
+
+    if args['label_novel_dataset']:
+        print("Label novel dataset")
+    else:
+        print("Label labeled-risks - normal dataset")
+
+    for n, image in enumerate(tensor_images):
+        image = tensor_images[n : n + 1]
         
-        img = tensor_image_to_cv2(video_embedder.tensor_images[n])
-        img = np.tile(img, (10, 10))
-        cv2.putText(
-            img,
-            '',
-            (0, 12),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.5,
-            (255, 0, 0),
-            1,
-            2,
-        )
+        img = tensor_image_to_cv2(tensor_images[n])
+        cv2.putText(img, '', (0, 12), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, 2)
 
         cv2.namedWindow("Image", cv2.WINDOW_NORMAL)
-        cv2.resizeWindow("Image", 1000, 500)
-        cv2.imshow("Image", img)
+        cv2.resizeWindow("Image", 640, 640)
+        zoomed_image = cv2.resize(img, (640, 640), interpolation=cv2.INTER_NEAREST)
+        cv2.imshow("Image", zoomed_image)
         if cv2.waitKey(25) & 0xFF == 27:  # Press 'Esc' to exit
             break
         # cv2.waitKey(0)  # Wait for a key press to close the window
         
         if args['label_novel_dataset']:
-            novel_risk_flag[n] = raf.novel_risk_flag
-            novel_safe_flag[n] = raf.novel_safe_flag
+            novel_risk_flag[n] = raf.risk_flag
+            novel_safe_flag[n] = raf.safe_flag
         else:
             risk_flag[n] = raf.risk_flag
             safe_flag[n] = raf.safe_flag
         spiral_flag[n] = raf.spiral_flag
 
-    
-    print("Risk flag array:")
-    print(risk_flag)
-    print(safe_flag)
-    print(novel_risk_flag)
-    print(novel_safe_flag)
-    print("----------------") 
 
     if args['label_novel_dataset']:
-        data['novel_risk_flag'] = np.array([risk_flag])
-        data['novel_safe_flag'] = np.array([safe_flag])
+        data['novel_risk_flag'] = np.array([novel_risk_flag])
+        data['novel_safe_flag'] = np.array([novel_safe_flag])
+        print("Setting novel_risk_flag and novel_safe_flag")
+        print(novel_risk_flag)
+        print(novel_safe_flag)
+        print("----------------") 
     else:
         data['risk_flag'] = np.array([risk_flag])
         data['safe_flag'] = np.array([safe_flag])
+        print("Setting risk_flag and safe_flag")
+        print(risk_flag)
+        print(safe_flag)
+        print("----------------") 
     data['spiral_flag'] = np.array([spiral_flag])
 
 
     print("Manual labelling ended, see the results")
-    for n, image in enumerate(video_embedder.tensor_images):
-        image = video_embedder.tensor_images[n : n + 1]
+    for n, image in enumerate(tensor_images):
+        image = tensor_images[n : n + 1]
         
         if risk_flag[n]:
             risk_label = 'R'
@@ -107,16 +103,15 @@ def label_video(args):
         else:
             novelty_label = ''
 
-
-        img = tensor_image_to_cv2(video_embedder.tensor_images[n])
-        img = np.tile(img, (10, 10))
+        img = tensor_image_to_cv2(tensor_images[n])
         cv2.putText(img, risk_label, (0, 12), cv2.FONT_HERSHEY_SIMPLEX,
             0.5, (255, 0, 0), 1, 2)
-        cv2.putText(img, novelty_label, (12, 0), cv2.FONT_HERSHEY_SIMPLEX,
+        cv2.putText(img, novelty_label, (0, 62), cv2.FONT_HERSHEY_SIMPLEX,
             0.5, (255, 0, 0), 1, 2)
 
         cv2.namedWindow("Image", cv2.WINDOW_NORMAL)
-        cv2.resizeWindow("Image", 1000, 500)
+        cv2.resizeWindow("Image", 640, 640)
+        zoomed_image = cv2.resize(img, (640, 640), interpolation=cv2.INTER_NEAREST)
         cv2.imshow("Image", img)
         if cv2.waitKey(25) & 0xFF == 27:  # Press 'Esc' to exit
             break

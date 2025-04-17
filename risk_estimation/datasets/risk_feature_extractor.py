@@ -7,10 +7,10 @@ from torch import nn
 from scipy.spatial.distance import cosine
 from torchvision.transforms.functional import to_pil_image
 
-SAVE_GPU_MEMORY = False
-
 class FeatureExtractor():
-    pass
+    @classmethod
+    def novel(cls):
+        return eval(cls.__name__ + "Novel")
 
 class VideoObservationsRiskLabels(FeatureExtractor):
     """ X = imgs, Y = Risk Labels are 1 """
@@ -25,10 +25,7 @@ class LatentObservationsSafeLabels(FeatureExtractor):
     @classmethod
     def extract(cls, data: Tuple, video_embedder=None, video_name=None):
         video_embedder.optimizer.zero_grad()
-        if SAVE_GPU_MEMORY:
-            X = video_embedder.model.encoder_batched(torch.tensor(data["img"], dtype=torch.float32).cuda()).detach().cpu().numpy()
-        else:
-            X = video_embedder.model.encoder(torch.tensor(data["img"], dtype=torch.float32).cuda()).detach().cpu().numpy()
+        X = video_embedder.model.bencoder(torch.tensor(data["img"], dtype=torch.float32).cuda()).detach().cpu().numpy()
         Y = data["safe_flag"]
         return X, Y
     
@@ -52,10 +49,7 @@ class LatentObservationsRiskLabels(FeatureExtractor):
     @classmethod
     def extract(cls, data: Tuple, video_embedder=None, video_name=None):
         video_embedder.optimizer.zero_grad()
-        if SAVE_GPU_MEMORY:
-            X = video_embedder.model.encoder_batched(torch.tensor(data["img"], dtype=torch.float32).cuda()).detach().cpu().numpy()
-        else:
-            X = video_embedder.model.encoder(torch.tensor(data["img"], dtype=torch.float32).cuda()).detach().cpu().numpy()
+        X = video_embedder.model.bencoder(torch.tensor(data["img"], dtype=torch.float32).cuda()).detach().cpu().numpy()
         Y = data["risk_flag"]
         return X, Y
     
@@ -79,10 +73,7 @@ class ResnetLatentObservationsRiskLabels(FeatureExtractor):
 
         imgs_new = torch.cat(imgs_new)
 
-        if SAVE_GPU_MEMORY:
-            X = video_embedder.model.encoder_batched(torch.tensor(data["img"], dtype=torch.float32).cuda()).detach().cpu().numpy()
-        else:
-            X = video_embedder.model.encoder(torch.tensor(data["img"], dtype=torch.float32).cuda()).detach().cpu().numpy()
+        X = video_embedder.model.bencoder(torch.tensor(data["img"], dtype=torch.float32).cuda()).detach().cpu().numpy()
         Y = data["risk_flag"]
         return X, Y
     
@@ -97,14 +88,14 @@ class ResnetLatentObservationsRiskLabels(FeatureExtractor):
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize(mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225]),
     ])
-
+    
 class StampedLatentObservationsRiskLabels(FeatureExtractor):
     """ This is the feature extractor used in the paper
         X = [h, alpha], Y = Risk Labels are 1 """
     @classmethod
     def extract(cls, data, video_embedder, video_name=None):
         video_embedder.optimizer.zero_grad()
-        latent = video_embedder.model.encoder(torch.tensor(data["img"], dtype=torch.float32).cuda()).detach().cpu().numpy()
+        latent = video_embedder.model.bencoder(torch.tensor(data["img"], dtype=torch.float32).cuda()).detach().cpu().numpy()
         if False: # TEST_PLOT
             import matplotlib.pyplot as plt
             plt.hist(latent.detach().cpu().numpy(), bins=100)
@@ -120,12 +111,21 @@ class StampedLatentObservationsRiskLabels(FeatureExtractor):
         # torch.cat((latent, frame_numbers), axis=1)
         # when data is in range -300 to 300 -> it is good to use the scaling
         # X = torch.cat((0.0015 * latent + 0.5, frame_numbers), axis=1)
-        Y = data["risk_flag"]
+        Y = cls.RiskFlag(data)
         return X, Y
+    
+    @classmethod
+    def RiskFlag(self, data):
+        return data["risk_flag"]
     
     @staticmethod
     def xdim(n):
         return n + 1 # latent dim + time
+
+class StampedLatentObservationsRiskLabelsNovel(StampedLatentObservationsRiskLabels):
+    @classmethod
+    def RiskFlag(self, data):
+        return data["novel_risk_flag"]
 
 ###
 ### DEPRECATED
@@ -134,7 +134,7 @@ class StampedDistLatentObservationsRiskLabels(FeatureExtractor):
     @classmethod
     def extract(cls, data: Tuple, video_embedder, video_name=None):
         video_embedder.optimizer.zero_grad()
-        latent = video_embedder.model.encoder(data["img"])
+        latent = video_embedder.model.bencoder(data["img"])
 
         frame_numbers = data["frame_number"] # (x, 1, 1)
 
@@ -157,7 +157,7 @@ class StampedDistRecErrLatentObservationsRiskLabels(FeatureExtractor):
     @classmethod
     def extract(cls, data: Tuple, video_embedder, video_name=None):
         video_embedder.optimizer.zero_grad()
-        latent = video_embedder.model.encoder(data["img"])
+        latent = video_embedder.model.bencoder(data["img"])
         reconstructed_images = video_embedder.model.decoder(latent)
         
         criterion = nn.MSELoss()

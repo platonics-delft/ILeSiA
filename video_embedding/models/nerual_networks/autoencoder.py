@@ -8,10 +8,44 @@ import torchvision.transforms as transforms
 from torch.utils.data import TensorDataset, DataLoader
 from torchvision.transforms.functional import to_pil_image
 
+RUN_BATCHED = True # Set to True if GPU low memory
+RUN_BATCHED_SIZE = 16 # Set lower if GPU low memory
+
+class AutoencoderBase(nn.Module):
+    def forward(self, x):
+        if self.run_batched: return self.bforward(x)
+        z = self.encoder(x)
+        x_reconstructed = self.decoder(z)
+        return x_reconstructed
+
+    def bforward(self,x, batch_size=RUN_BATCHED_SIZE):
+        ''' Only nneded when GPU low memory '''
+        dl = DataLoader(x, batch_size=batch_size)
+        out = []
+        with torch.no_grad():
+            for batch in dl:
+                latent_images_batch = self.encoder(batch)
+                latent_images_batch = self.decoder(latent_images_batch)
+                out.append(latent_images_batch)
+        return torch.cat(out, dim=0)
+
+    def bencoder(self, x, batch_size=RUN_BATCHED_SIZE):
+        if not RUN_BATCHED: return self.encoder(x)
+        
+        dl = DataLoader(x, batch_size=batch_size)
+        out = []
+        with torch.no_grad():
+            for batch in dl:
+                latent_images_batch = self.encoder(batch)
+                out.append(latent_images_batch)
+        return torch.cat(out, dim=0)
+    
+
 
 # Define the autoencoder architecture
-class Autoencoder(nn.Module):
-    def __init__(self, latent_dim=10):
+class Autoencoder(AutoencoderBase):
+    def __init__(self, latent_dim=10, run_batched=RUN_BATCHED):
+        self.run_batched = run_batched
         super(Autoencoder, self).__init__()
         self.encoder = nn.Sequential(
             nn.Conv2d(1, 40, kernel_size=3, stride=1, padding=1),
@@ -51,34 +85,8 @@ class Autoencoder(nn.Module):
                             output_padding=1),
             nn.LayerNorm([1, 64, 64]),  # Assuming the output images are 64x64
         )
-        
-    def forward(self, x):
-        x = self.encoder(x)
-        x = self.decoder(x)
-        return x
 
-    def forward_batched(self,x):
-        ''' Only nneded when GPU low memory '''
-        dl = DataLoader(x, batch_size = 1)
-        out = []
-        with torch.no_grad():
-            for batch in dl:
-                latent_images_batch = self.encoder(batch)
-                latent_images_batch = self.decoder(latent_images_batch)
-                out.append(latent_images_batch)
-        return torch.cat(out, dim=0)
-
-    def encoder_batched(self, x):
-        ''' Only nneded when GPU low memory '''
-        dl = DataLoader(x, batch_size = 1)
-        out = []
-        with torch.no_grad():
-            for batch in dl:
-                latent_images_batch = self.encoder(batch)
-                out.append(latent_images_batch)
-        return torch.cat(out, dim=0)
-
-class Autoencoder2(nn.Module):
+class Autoencoder2(AutoencoderBase):
     def __init__(self, latent_dim: int = 12):
         super(Autoencoder2, self).__init__()
 
@@ -121,23 +129,7 @@ class Autoencoder2(nn.Module):
         )
 
 
-    def forward_batched(self,x):
-        ''' Only nneded when GPU low memory '''
-        dl = DataLoader(x, batch_size = 1)
-        out = []
-        with torch.no_grad():
-            for batch in dl:
-                latent_images_batch = self.encoder(batch)
-                latent_images_batch = self.decoder(latent_images_batch)
-                out.append(latent_images_batch)
-        return torch.cat(out, dim=0)
-    
-    def forward(self, x):
-        z = self.encoder(x)
-        x_reconstructed = self.decoder(z)
-        return x_reconstructed
-    
-class Autoencoder3(nn.Module):
+class Autoencoder3(AutoencoderBase):
     def __init__(self, latent_dim: int = 12):
         super(Autoencoder3, self).__init__()  # Fixed class name
 
@@ -186,23 +178,7 @@ class Autoencoder3(nn.Module):
             nn.Sigmoid()
         )
 
-    def forward(self, x):
-        z = self.encoder(x)
-        x_reconstructed = self.decoder(z)
-        return x_reconstructed
-
-    def forward_batched(self,x):
-        ''' Only nneded when GPU low memory '''
-        dl = DataLoader(x, batch_size = 1)
-        out = []
-        with torch.no_grad():
-            for batch in dl:
-                latent_images_batch = self.encoder(batch)
-                latent_images_batch = self.decoder(latent_images_batch)
-                out.append(latent_images_batch)
-        return torch.cat(out, dim=0)
-
-class LargeAutoencoder(nn.Module):
+class LargeAutoencoder(AutoencoderBase):
     def __init__(self, latent_dim=10):
         super(LargeAutoencoder, self).__init__()
         # Increasing the number of filters and adding more layers
@@ -246,43 +222,18 @@ class LargeAutoencoder(nn.Module):
             nn.ConvTranspose2d(64, 1, kernel_size=3, stride=2, padding=1, output_padding=1),
             nn.LayerNorm([1, 64, 64]),
         )
-        
-    def forward(self, x):
-        x = self.encoder(x)
-        x = self.decoder(x)
-        return x
 
-    def forward_batched(self,x):
-        ''' Only nneded when GPU low memory '''
-        dl = DataLoader(x, batch_size = 1)
-        out = []
-        with torch.no_grad():
-            for batch in dl:
-                latent_images_batch = self.encoder(batch)
-                latent_images_batch = self.decoder(latent_images_batch)
-                out.append(latent_images_batch)
-        return torch.cat(out, dim=0)
 
-    def encoder_batched(self, x):
-        dl = DataLoader(x, batch_size = 1)
-        out = []
-        with torch.no_grad():
-            for batch in dl:
-                latent_images_batch = self.encoder(batch)
-                out.append(latent_images_batch)
-        return torch.cat(out, dim=0)
 
 # Remove the last fully connected layer
 # Retain all layers except the final fully connected layer
 # Decide where to cut the ResNet
-
-
 class CustomResnetFuns():
     
     def encoder(self, *args, **kwargs):
         return self.__call__(*args, **kwargs)
     
-    def encoder_batched(self, x):
+    def bencoder(self, x):
         dl = DataLoader(x, batch_size = 1)
         out = []
         with torch.no_grad():

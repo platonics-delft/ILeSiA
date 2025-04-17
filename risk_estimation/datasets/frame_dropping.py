@@ -10,6 +10,10 @@ class FrameDropper():
             data_new[data_feature_key] = data[data_feature_key][idxs]
         
         return data_new
+    
+    @classmethod
+    def novel(cls):
+        return eval(cls.__name__ + "Novel")
 
 class NoFrameDroppingPolicy(FrameDropper):
     @classmethod
@@ -38,37 +42,62 @@ class OnlyLabelledFramesDroppingPolicy(FrameDropper):
         return data 
 
 
-class OnlyLabelledFramesDroppingPolicyRiskPegPick(OnlyLabelledFramesDroppingPolicy):
+
+class OnlyLabelledFramesDroppingPolicyRiskpeg_pick404(OnlyLabelledFramesDroppingPolicy):
     mintestcut = 60
     maxtestcut = 90
     mintestcut2 = 480
     maxtestcut2 = 510
 
-class OnlyLabelledFramesDroppingPolicyRiskPegDoor(OnlyLabelledFramesDroppingPolicy):
+class OnlyLabelledFramesDroppingPolicyRiskpeg_door404(OnlyLabelledFramesDroppingPolicy):
     mintestcut = 150
     maxtestcut = 240
     mintestcut2 = 630
     maxtestcut2 = 710
 
-class OnlyLabelledFramesDroppingPolicyRiskPegPlace(OnlyLabelledFramesDroppingPolicy):
+class OnlyLabelledFramesDroppingPolicyRiskpeg_place404(OnlyLabelledFramesDroppingPolicy):
     mintestcut = 60
     maxtestcut = 150
     mintestcut2 = 400
     maxtestcut2 = 460
 
-class OnlyLabelledFramesDroppingPolicyRiskSliderMove(OnlyLabelledFramesDroppingPolicy):
+class OnlyLabelledFramesDroppingPolicyRiskslider_move404(OnlyLabelledFramesDroppingPolicy):
     mintestcut = 30
     maxtestcut = 90
     mintestcut2 = 215
     maxtestcut2 = 245
 
-class OnlyLabelledFramesDroppingPolicyRiskMoveAround(OnlyLabelledFramesDroppingPolicy):
+class OnlyLabelledFramesDroppingPolicyRiskmove_around404(OnlyLabelledFramesDroppingPolicy):
     mintestcut = 60
     maxtestcut = 120
     mintestcut2 = 150
     maxtestcut2 = 210
 
 
+class OnlyLabelledFramesDroppingPolicyNovel(FrameDropper):
+    """If risk flag and safe flag is False, datasample is dropped
+    """    
+    mintestcut = -1
+    maxtestcut = 99999999
+
+    mintestcut2 = 0
+    maxtestcut2 = 0
+
+    @classmethod
+    def filter_frames(cls, data: Tuple):
+        idxs = []
+        l = len(data["img"])
+        for i in range(l):
+            if (cls.mintestcut < i < cls.maxtestcut) or (cls.mintestcut2 < i < cls.maxtestcut2):
+                if data["novel_risk_flag"][i] == 1 or data["novel_safe_flag"][i] == 1:
+                    idxs.append(i)
+                
+        data = cls.filter_dataset_with_idxs(data, idxs)
+        return data 
+
+###
+### DEPRECATED
+###
 class ProactiveRiskLabelingDroppingPolicy(FrameDropper): 
     """ Plus all safe indexed """
     """Frames where Risk flags changes 'Extreme Points' are detected, frames near Extreme points ('near_radius') are used

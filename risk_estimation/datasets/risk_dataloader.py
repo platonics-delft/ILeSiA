@@ -99,7 +99,7 @@ class RiskEstimationDataset(Dataset):
         frame_dropping_policy=NoFrameDroppingPolicy,
         features=LatentObservationsRiskLabels,
         transform=None,
-        add_whiteblackimg=False,
+        add_whiteblackimg=True,
     ):
         """ The main function to load the dataset from list of video names.
 
@@ -161,7 +161,7 @@ class RiskEstimationDataset(Dataset):
             frame_dropping_policy=NoFrameDroppingPolicy,
             features=LatentObservationsRiskLabels,
             transform=None,
-            add_whiteblackimg=False,
+            add_whiteblackimg=True,
         ):
         """ Wrapper to get DataLoader instead of dataset
         """
