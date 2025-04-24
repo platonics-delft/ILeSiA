@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import DataLoader, Subset
 import numpy as np  
+from collections import deque 
 
 
 class RiskEstimatorBase():
@@ -25,16 +26,27 @@ class RiskEstimatorBase():
     def model_path(self):
         return f"{risk_estimation.path}/saved_models/{get_session()}"
 
-    def risk_to_decision(self, prob: float) -> int:
-        """
+    WINDOW_SIZE = 3
+    prev = deque([False] * WINDOW_SIZE, maxlen=WINDOW_SIZE)
+    def risk_to_decision(self, r: float) -> int:
+        """ Activation Logic
         Args:
-            prob (float): Probability of riskiness
+            r (float): Risk Score
             thr (float, optional): Threshold of decision
 
         Returns:
-            int: Decision (1 safe or 0 risk)
+            int: Risk Flag (0 safe or 1 risk)
         """
-        return np.array(prob > self.thr, dtype=int)
+        # return np.array(prob > self.thr, dtype=int) # old
+        d_ = list(self.prev) + list(np.array(r) > self.thr)
+        ret = []
+        for i in range(self.WINDOW_SIZE+1, len(d_) + 1):
+            window = d_[i - self.WINDOW_SIZE:i]
+            ret.append(all(window))
+
+        self.prev = deque(d_[-self.WINDOW_SIZE:], maxlen=self.WINDOW_SIZE)
+    
+        return np.array(ret)
 
     def sample(self, 
                X: torch.Tensor # 1D or 2D tensor
