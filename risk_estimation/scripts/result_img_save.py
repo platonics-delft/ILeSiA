@@ -121,7 +121,7 @@ def sample_and_save_on_video(video_name: str, video_embedder, risk_estimator, fe
     )
     safe_labels = RiskEstimationDataset.load_dataset([video_name], video_embedder,    
         frame_dropping_policy=NoFrameDroppingPolicy, # All frames are sampled 
-        features=LatentObservationsSafeLabels
+        features=features.SafeLabels()
     )
 
     pred, risks, std = risk_estimator.sample(dataset.X.squeeze())

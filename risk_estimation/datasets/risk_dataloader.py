@@ -74,7 +74,7 @@ class RiskEstimationDataset(Dataset):
         }
         # (num_images, h, w) -> (num_images, 1, h, w)
         video_data["img"] = saved_img_processing(data["img"]).squeeze().unsqueeze(1).cpu().numpy()
-        if "risk_flag" in data: video_data["risk_flag"] = np.array([data["risk_flag"]]).T            
+        if "risk_flag" in data: video_data["risk_flag"] = np.array([data["risk_flag"]]).T
         if "safe_flag" in data: video_data["safe_flag"] = np.array([data["safe_flag"]]).T
         if "novel_risk_flag" in data: video_data["novel_risk_flag"] = np.array([data["novel_risk_flag"]]).T
         if "novel_safe_flag" in data: video_data["novel_safe_flag"] = np.array([data["novel_safe_flag"]]).T

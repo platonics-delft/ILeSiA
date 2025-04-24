@@ -117,7 +117,7 @@ def label_video(args):
             break
         # cv2.waitKey(0)  # Wait for a key press to close the window
         
-    if input("Save? (y)") == 'y':
+    if input("Save? (y) ") == 'y':
         save(data, file=args['video'])
 
 if __name__ == "__main__":
@@ -127,7 +127,7 @@ if __name__ == "__main__":
         epilog="",
     )
     parser.add_argument("--video", type=str)
-    parser.add_argument("--session", default="quantitative_study")
+    parser.add_argument("--session", default="AE3")
     parser.add_argument("--label_novel_dataset", action="store_true")
     parser.set_defaults(label_novel_dataset=False)
     

@@ -334,7 +334,6 @@ if __name__ == "__main__":
     # e.g.
     import risk_estimation
     root_dir = f"{risk_estimation.package_path}/risk_estimation/autogen"
-    # root_dir = "/home/petr/ilesia_ws/src/ILeSiA/risk_estimation/autogen/quantitative_study/peg_place404/peg_place404_test_0"
     print(root_dir)
     training_frames_reduced = False
     title_enabled = True

@@ -74,8 +74,9 @@ class ResultEvaluator():
         return Y_test
 
     def __call__(self, risk_estimator, video_embedder, X_test, Y_test, X_test_images=None, Y_test_images=None):
+        if len(X_test) == 0: return
+
         Y_test = self.to_cpu(Y_test)
-        
         Y_pred, risk, std = risk_estimator.sample(X_test)
         
         if "accuracy" in self.iwanttosee:

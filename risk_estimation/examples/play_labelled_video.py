@@ -35,7 +35,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--session",
-        default="quantitative_study",
+        default="AE3",
     )
     
     main(parser.parse_args())

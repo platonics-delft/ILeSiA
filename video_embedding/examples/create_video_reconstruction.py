@@ -9,7 +9,7 @@ from video_embedding.utils import set_session, get_all_names
 # import cv2
 import PIL
 from video_embedding.models.video_embedding_dataset import load_dataloader
-# load model src/ILeSiA/video_embedding/saved_models/quantitative_study/peg_place404_model_12.pt
+# load model src/ILeSiA/video_embedding/saved_models/AE3/peg_place404_model_12.pt
 name = "peg_pick404"
 set_session("AE3")
 video_embedder = VideoEmbedder(
@@ -20,7 +20,7 @@ video_embedder = VideoEmbedder(
     )
 
 video_embedder.load_model()
-# video_embedder.load_model(path=Path("src/ILeSiA/video_embedding/saved_models/quantitative_study/peg_door404_Autoencoder2_12.pt"))
+# video_embedder.load_model(path=Path("src/ILeSiA/video_embedding/saved_models/AE3/peg_door404_Autoencoder2_12.pt"))
     
     
     

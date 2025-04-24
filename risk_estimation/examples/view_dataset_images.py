@@ -44,5 +44,5 @@ def label_video(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", type=str, default="peg_pick404")
-    parser.add_argument("--session", default="quantitative_study")
+    parser.add_argument("--session", default="AE3")
     label_video(vars(parser.parse_args()))

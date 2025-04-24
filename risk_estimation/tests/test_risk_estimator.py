@@ -15,13 +15,13 @@ from risk_estimation.models.mlp_risk_estimator import MLPRiskEstimator
 from risk_estimation.models.dist_risk_estimator import DistanceRiskEstimator
 
 def test_main_video_embedder(video = "peg_door404"):
-    set_session("quantitative_study")
+    set_session("AE3")
     video_embedder = VideoEmbedder(name=video, latent_dim=12)
     video_embedder.load(videos=[video])
     video_embedder.train(num_epochs=1)
 
 def test_risk_estimator_mlp(features=LatentObservationsRiskLabels, skill_name='peg_door404'):
-    set_session("quantitative_study")
+    set_session("AE3")
 
     video_embedder = VideoEmbedder(name=skill_name, latent_dim=12)
     video_embedder.load_model()
@@ -51,7 +51,7 @@ def test_risk_estimator_mlp(features=LatentObservationsRiskLabels, skill_name='p
 
 
 # def test_risk_estimator_euclidean_distance(skill_name='peg_door404'):
-#     set_session("quantitative_study")
+#     set_session("AE3")
 #     # Video embedder encodes skill from video
 #     video_embedder = VideoEmbedder(name=skill_name, latent_dim=12)
 #     video_embedder.load()  # load data
@@ -101,7 +101,7 @@ def test_risk_estimator_mlp(features=LatentObservationsRiskLabels, skill_name='p
 
 def test_deplyed_model_usage():
 
-    set_session("quantitative_study")
+    set_session("AE3")
     sl = SafetyLayer(skill_name="peg_door404")
 
     # self.get_observations()

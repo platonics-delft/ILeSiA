@@ -18,7 +18,7 @@ def test_loading(
         train_epoch=1000,
         train_patience=2000,
     ):
-    set_session("quantitative_study")
+    set_session("AE3")
 
     video_names = all_trial_names('peg_door404')
 

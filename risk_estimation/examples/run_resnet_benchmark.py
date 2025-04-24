@@ -85,7 +85,7 @@ skills =[
     # "probe_pick404"
     # "move_around404"
 ]
-session = "quantitative_study"
+session = "AE3"
 stages = [
     [64,    "CustomResnetStage1"],  # stage 1, # needs stage-1 latent dim
     [256,   "CustomResnetStage2"],  # stage 2, # needs stage-2 latent dim

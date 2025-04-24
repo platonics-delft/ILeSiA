@@ -235,6 +235,7 @@ class TwinGPRiskEstimator():
             model.validation_dataloaders = {}
         for dataloader, name in zip(list_of_dataloaders, names):
             dataloaders_model_split = self.split_dataloader_to_models(dataloader)
+            if dataloaders_model_split is None: continue
             for dataloader, model in zip(dataloaders_model_split, self.models):
                 model.validation_dataloaders[name] = dataloader
 
@@ -302,7 +303,6 @@ class TwinGPRiskEstimator():
         dataset = dataloader.dataset
         batch_size = dataloader.batch_size
         
-        assert len(dataset[0][0]) in [9, 10, 13, 14, 17, 18]
 
         low_indices = []
         high_indices = []
@@ -317,11 +317,15 @@ class TwinGPRiskEstimator():
                 high_indices.append(i)
             else:
                 high_indices.append(i)
-
-        return [
-            DataLoader(Subset(dataset, low_indices), batch_size=batch_size, shuffle=True),
-            DataLoader(Subset(dataset, high_indices), batch_size=batch_size, shuffle=True),
-        ] 
+        
+        try:
+            return [
+                DataLoader(Subset(dataset, low_indices), batch_size=batch_size, shuffle=True),
+                DataLoader(Subset(dataset, high_indices), batch_size=batch_size, shuffle=True),
+            ] 
+        except ValueError:
+            print("Dataset is empty!")
+            return None
 
     def training_loop(self, dataloader, early_stop=True):
         

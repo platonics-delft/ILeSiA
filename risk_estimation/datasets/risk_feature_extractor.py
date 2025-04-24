@@ -111,21 +111,29 @@ class StampedLatentObservationsRiskLabels(FeatureExtractor):
         # torch.cat((latent, frame_numbers), axis=1)
         # when data is in range -300 to 300 -> it is good to use the scaling
         # X = torch.cat((0.0015 * latent + 0.5, frame_numbers), axis=1)
-        Y = cls.RiskFlag(data)
+        Y = cls.YFlag(data)
         return X, Y
     
     @classmethod
-    def RiskFlag(self, data):
+    def YFlag(self, data):
         return data["risk_flag"]
     
     @staticmethod
     def xdim(n):
         return n + 1 # latent dim + time
+    
+    def SafeLabels():
+        return StampedLatentObservationsSafeLabels
 
 class StampedLatentObservationsRiskLabelsNovel(StampedLatentObservationsRiskLabels):
     @classmethod
-    def RiskFlag(self, data):
+    def YFlag(self, data):
         return data["novel_risk_flag"]
+
+class StampedLatentObservationsSafeLabels(StampedLatentObservationsRiskLabels):
+    @classmethod
+    def YFlag(self, data):
+        return data["safe_flag"]
 
 ###
 ### DEPRECATED
