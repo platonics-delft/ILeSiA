@@ -345,7 +345,7 @@ if __name__ == "__main__":
             if (file.endswith('.csv') and 
                 'index' not in file and 
                 'video_list' not in file and 
-                not (file.startswith('Test') or file.startswith('Train'))):
+                not (file.startswith('Test') or file.startswith('Train') or file.startswith('Novel'))):
                 csv_files.append(os.path.join(subdir, file))
 
     pbar = tqdm(csv_files, desc="Processing files")

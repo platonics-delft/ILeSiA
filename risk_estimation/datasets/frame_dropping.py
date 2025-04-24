@@ -41,7 +41,19 @@ class OnlyLabelledFramesDroppingPolicy(FrameDropper):
         data = cls.filter_dataset_with_idxs(data, idxs)
         return data 
 
-
+class FrameDroppingPartsBetweenSafeAndRisk(FrameDropper):
+    
+    @classmethod
+    def filter_frames(cls, data: Tuple):
+        idxs = []
+        l = len(data["img"])
+        for i in range(l):
+            if (cls.mintestcut < i < cls.maxtestcut) or (cls.mintestcut2 < i < cls.maxtestcut2):
+                if data["risk_flag"][i] == 1 or data["safe_flag"][i] == 1:
+                    idxs.append(i)
+                
+        data = cls.filter_dataset_with_idxs(data, idxs)
+        return data
 
 class OnlyLabelledFramesDroppingPolicyRiskpeg_pick404(OnlyLabelledFramesDroppingPolicy):
     mintestcut = 60

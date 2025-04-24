@@ -2,7 +2,11 @@ import rospy
 import numpy as np
 from pynput.keyboard import KeyCode, Key
 from pynput.keyboard import Listener
-from panda_ros.pose_transform_functions import array_quat_2_pose, list_2_quaternion
+try:
+    from panda_ros.pose_transform_functions import array_quat_2_pose, list_2_quaternion
+except ModuleNotFoundError:
+    print("Warning: panda_ros not found, Feedback running without robot")
+    panda_ros = None
 from risk_estimation.is_roscore_running import is_roscore_running
 
 try:
@@ -51,17 +55,19 @@ class Feedback():
             self.feedback[2] = -self.feedback_gain
         # Close/open gripper
         if key == KeyCode.from_char('c'):
-            self.grip_value = 0
-            self.grasp_command.goal.epsilon.inner = 0.1
-            self.grasp_command.goal.epsilon.outer = 0.1
-            self.grasp_command.goal.force = 50
-            self.grasp_gripper(self.grip_value)
-            self.gripper_feedback_correction = 1
+            if panda_ros:
+                self.grip_value = 0
+                self.grasp_command.goal.epsilon.inner = 0.1
+                self.grasp_command.goal.epsilon.outer = 0.1
+                self.grasp_command.goal.force = 50
+                self.grasp_gripper(self.grip_value)
+                self.gripper_feedback_correction = 1
 
         if key == KeyCode.from_char('o'):
-            self.grip_value = self.grip_open_width
-            self.move_gripper(self.grip_value)
-            self.gripper_feedback_correction = 1
+            if panda_ros:
+                self.grip_value = self.grip_open_width
+                self.move_gripper(self.grip_value)
+                self.gripper_feedback_correction = 1
         if key == KeyCode.from_char('f'):
             self.feedback[3] = 1
         if key == KeyCode.from_char('k'):
@@ -82,14 +88,15 @@ class Feedback():
             self.spiral_flag = 0
 
         if key == KeyCode.from_char('m'):    
-            quat_goal = list_2_quaternion(self.curr_ori)
-            goal = array_quat_2_pose(self.curr_pos, quat_goal)
-            self.goal_pub.publish(goal)
-            self.set_stiffness(0, 0, 0, 50, 50, 50, 0)
-            print("higher rotatioal stiffness")
+            if panda_ros:
+                quat_goal = list_2_quaternion(self.curr_ori)
+                goal = array_quat_2_pose(self.curr_pos, quat_goal)
+                self.goal_pub.publish(goal)
+                self.set_stiffness(0, 0, 0, 50, 50, 50, 0)
+                print("higher rotatioal stiffness")
 
-        if key == KeyCode.from_char('n'):    
-            self.set_stiffness(0, 0, 0, 0, 0, 0, 0)
+        if key == KeyCode.from_char('n'):   
+            if panda_ros: self.set_stiffness(0, 0, 0, 0, 0, 0, 0)
             print("zero rotatioal stiffness")
         if key == Key.space:
             self.pause=not(self.pause)

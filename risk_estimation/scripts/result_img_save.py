@@ -63,7 +63,7 @@ def get_image_triplet(
         original_images.append(original_image)
         loss_title_images.append(loss_title_image)
     
-    print("Averaged reconstruction loss: ", float(sum(cr)/len(cr)))
+    # print("Averaged reconstruction loss: ", float(sum(cr)/len(cr)))
     
     image_triplets = []
     for ori, dec, sal in zip(original_images, decoded_images, loss_title_images):
@@ -117,11 +117,11 @@ def sample_and_save_on_video(video_name: str, video_embedder, risk_estimator, fe
 
     dataset = RiskEstimationDataset.load_dataset([video_name], video_embedder,    
         frame_dropping_policy=NoFrameDroppingPolicy, # All frames are sampled 
-        features=features
+        features=features, add_whiteblackimg=False, 
     )
     safe_labels = RiskEstimationDataset.load_dataset([video_name], video_embedder,    
         frame_dropping_policy=NoFrameDroppingPolicy, # All frames are sampled 
-        features=features.SafeLabels()
+        features=features.SafeLabels(), add_whiteblackimg=False,
     )
 
     pred, risks, std = risk_estimator.sample(dataset.X.squeeze())

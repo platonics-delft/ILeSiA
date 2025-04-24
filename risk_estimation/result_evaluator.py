@@ -109,6 +109,29 @@ class ResultEvaluator():
         
         self.compute_acc_and_cf(Y_test, Y_pred)
 
+        fp = [1 if true == 0 and pred == 1 else 0 for true, pred in zip(Y_test, Y_pred)]
+        fn = [1 if true == 1 and pred == 0 else 0 for true, pred in zip(Y_test, Y_pred)]
+        tp = [1 if true == 1 and pred == 1 else 0 for true, pred in zip(Y_test, Y_pred)]
+        tn = [1 if true == 0 and pred == 0 else 0 for true, pred in zip(Y_test, Y_pred)]
+        alpha = X_test[:,-1].detach().cpu().numpy()
+
+        labels = np.full_like(fp, '', dtype='<U2')
+        for i in range(len(fp)):
+            if fp[i] + fn[i] + tp[i] + tn[i] != 1:
+                raise ValueError("Unexpected value in confusion matrix")
+            if fp[i] == 1:
+                labels[i] = 'fp'
+            elif fn[i] == 1:
+                labels[i] = 'fn'
+            elif tp[i] == 1:
+                labels[i] = 'tp'
+            elif tn[i] == 1:
+                labels[i] = 'tn'
+            else:
+                raise ValueError("Unexpected value in confusion matrix")
+
+        self.color_data = labels
+
         return self.return_wrong_samples(Y_test, Y_pred)
     
     def compute_acc_and_cf(self, Y_test, Y_pred):

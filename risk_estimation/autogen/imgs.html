@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Category / Sub-category Image Viewer</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 2rem;
+    }
+    h2 {
+      margin-top: 1.5rem;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+    .pair {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    .pair img {
+      max-width: 800px;
+      max-height: 500px;
+      object-fit: contain;
+      border: 1px solid #ddd;
+      background: #f9f9f9;
+    }
+    .pair .label {
+      font-size: 0.9rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <p>Left column is GP, Right column is MLP.<br>Title legend:<br>(1) skill name ("peg_door404")<br>(2) 'test' or 'trial', where 'trial' was used for training<br>(3) Execution id number: 0-30<br>(4) Model (GP/MLP)<br>(5) Model Parameters: <br>- a) cautious (mu+sigma),<br>- b) xdim size input for model,<br>- c) patience epoch,<br>- d) learning rate and<br>- e) total number of epoch trained.</p>
+  <hr>
+  <div id="container"></div>
+
+  <script>
+    const container = document.getElementById('container');
+
+    // 1. Fetch and parse the CSV
+    fetch('video_list.csv')
+      .then(res => res.text())
+      .then(csvText => {
+        // Split lines, drop header
+        const lines = csvText.trim().split('\n').slice(1);
+
+        lines.forEach(line => {
+          // Each line: Time,Videos
+          const [, rawPath] = line.split(',');
+          // Ensure trailing slash
+          const folder = rawPath.trim().replace(/\/+$/, '');
+
+          // Create a wrapper for each pair
+          const wrapper = document.createElement('div');
+          wrapper.className = 'pair';
+          
+          [`${folder}_GP__cautious_xdim13_ptnce500_lr0.01_ep400_twin_plot.png`, `${folder}_MLP2___xdim13_ptnce500_lr0.001_ep0_plot.png`].forEach(filename => {
+            const col = document.createElement('div');
+            const img = document.createElement('img');
+            img.src = `${filename}`;
+            img.alt = `${filename}`;
+
+            const lbl = document.createElement('div');
+            lbl.className = 'label';
+            //lbl.textContent = filename;
+
+            col.append(img, lbl);
+            wrapper.append(col);
+          });
+
+          container.appendChild(wrapper);
+        });
+      })
+      .catch(err => console.error('CSV load error:', err));
+  </script>
+
+</body>
+</html>
