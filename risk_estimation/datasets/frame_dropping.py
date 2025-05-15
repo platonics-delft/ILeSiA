@@ -20,6 +20,28 @@ class NoFrameDroppingPolicy(FrameDropper):
     def filter_frames(cls, data: Tuple):
         return data
 
+
+class RangedFramesDroppingPolicy(FrameDropper):
+    """If risk flag and safe flag is False, datasample is dropped
+    """    
+    mintestcut = -1
+    maxtestcut = 99999999
+
+    mintestcut2 = 0
+    maxtestcut2 = 0
+
+    @classmethod
+    def filter_frames(cls, data: Tuple):
+        idxs = []
+        l = len(data["img"])
+        for i in range(l):
+            if (cls.mintestcut < i < cls.maxtestcut) or (cls.mintestcut2 < i < cls.maxtestcut2):
+                idxs.append(i)
+                
+        data = cls.filter_dataset_with_idxs(data, idxs)
+        return data 
+
+
 class OnlyLabelledFramesDroppingPolicy(FrameDropper):
     """If risk flag and safe flag is False, datasample is dropped
     """    

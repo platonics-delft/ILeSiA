@@ -12,6 +12,7 @@ import cv2
 import risk_estimation, video_embedding
 from video_embedding.utils import get_session
 from video_embedding.models.nerual_networks.autoencoder import *
+from video_embedding.models.nerual_networks.resnet_embedder import *
 from tqdm import tqdm
 
 class VideoEmbedder():

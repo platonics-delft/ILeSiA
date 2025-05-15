@@ -33,6 +33,16 @@ class RiskEstimationDataset(Dataset):
         self.batch_size = batch_size
         self.transform = transform
 
+    def __add__(self, other):
+        if isinstance(other, RiskEstimationDataset):
+            X = torch.cat((self.X, other.X), dim=0)
+            Y = torch.cat((self.Y, other.Y), dim=0)
+            imgs = torch.cat((self.imgs, other.imgs), dim=0)
+            video_names = self.video_names + other.video_names
+            return RiskEstimationDataset(X, Y, imgs, self.batch_size, self.transform, video_names)
+        else:
+            raise TypeError("Unsupported type for addition")
+
     def to_dataloader(self):
         return DataLoader(self, batch_size=self.batch_size, shuffle=False)
 

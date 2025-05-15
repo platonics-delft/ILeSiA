@@ -66,7 +66,7 @@ class ResnetLatentObservationsRiskLabels(FeatureExtractor):
         imgs = data["img"]
         imgs_new = []
         for img in imgs:
-            x_pil = to_pil_image(img)
+            x_pil = to_pil_image(img.squeeze())
             x_ = cls.rgb_transform(x_pil)
             x_ = torch.tensor(256 * (1-x_), dtype=torch.float32).cuda()
             imgs_new.append(x_.unsqueeze(0))
