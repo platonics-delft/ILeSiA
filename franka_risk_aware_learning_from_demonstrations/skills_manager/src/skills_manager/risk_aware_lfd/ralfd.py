@@ -99,8 +99,8 @@ class RALfD(RiskAwarePlayer, RiskAwareFeedback, LfD):
             self.recorded_safe_flag = np.ones((self.recorded_safe_flag.shape))
             self.recorded_safe_flag[self.recorded_risk_flag != 0] = 0
 
-            pathlib.Path(f"{self._package_path}/trajectories/{get_session()}").mkdir(parents=True, exist_ok=True)
-            np.savez(f"{self._package_path}/trajectories/{get_session()}/{file}.npz",
+            pathlib.Path(f"{get_trajectory_path()}/trajectories/{get_session()}").mkdir(parents=True, exist_ok=True)
+            np.savez(f"{get_trajectory_path()}/trajectories/{get_session()}/{file}.npz",
                  traj=self.recorded_traj,
                  ori=self.recorded_ori,
                  grip=self.recorded_gripper,
@@ -113,7 +113,7 @@ class RALfD(RiskAwarePlayer, RiskAwareFeedback, LfD):
                  recovery_phase=self.recorded_recovery_phase,)
     
     def load(self, file='last'):
-        data = np.load(f"{self._package_path}/trajectories/{get_session()}/{file}.npz")
+        data = np.load(f"{get_trajectory_path()}/trajectories/{get_session()}/{file}.npz")
         self.recorded_traj = data['traj']
         self.recorded_ori = data['ori']
         self.recorded_gripper = data['grip']
@@ -122,10 +122,13 @@ class RALfD(RiskAwarePlayer, RiskAwareFeedback, LfD):
         self.recorded_spiral_flag = data['spiral_flag']
         self.recorded_risk_flag = data['risk_flag']
         self.recorded_safe_flag = data['safe_flag']
-        self.recorded_novelty_flag = data['novelty_flag']
+        if 'novelty_flag' not in data.keys():
+            self.recorded_novelty_flag = np.zeros(data['risk_flag'].shape)
+        else:
+            self.recorded_novelty_flag = data['novelty_flag']
         ## This check is temporary
         if 'recovery_phase' not in data.keys():
-            self.recorded_recovery_phase = np.zeros(data['novelty_flag'].shape)
+            self.recorded_recovery_phase = np.zeros(data['risk_flag'].shape)
         else:    
             self.recorded_recovery_phase = data['recovery_phase']
         if self.final_transform is not None:
