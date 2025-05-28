@@ -6,7 +6,7 @@ import numpy as np
 import risk_estimation
 from risk_estimation.scripts.result_img_save import sample_and_save_on_video
 
-from video_embedding.utils import get_session, number_of_saved_trials
+from video_embedding.utils import get_session, number_of_saved
 
 from skills_manager.camera_feedback import image_process
 from skills_manager.lfd import LfD
@@ -77,7 +77,7 @@ class RALfD(RiskAwarePlayer, RiskAwareFeedback, LfD):
             file = file[0]
         
         if risk_exec_trial:
-            n = number_of_saved_trials(file) # trials 0, ..., n-1 exists
+            n = number_of_saved(file, "trial") # trials 0, ..., n-1 exists
 
             pathlib.Path(f"{get_trajectory_path()}/trajectories/{get_session()}").mkdir(parents=True, exist_ok=True)
             np.savez(f"{get_trajectory_path()}/trajectories/{get_session()}/{file}_trial_{n}.npz",

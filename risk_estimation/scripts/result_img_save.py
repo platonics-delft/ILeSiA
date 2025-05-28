@@ -82,6 +82,7 @@ def video_triplets_save(video_name: str, video_embedder, folder="videos"):
 
     video_name_without_trial = video_name.split("_trial_")[0]
     video_name_without_trial = video_name_without_trial.split("_test_")[0]
+    video_name_without_trial = video_name_without_trial.split("_novel_")[0]
 
     # .. / video_skill / video_name with trial /
     path = f"{risk_estimation.path}/{folder}/{get_session()}/{video_name_without_trial}/{video_name}/"
@@ -107,6 +108,7 @@ def sample_and_save_on_video(video_name: str, video_embedder, risk_estimator, fe
 
     video_name_without_trial = video_name.split("_trial_")[0]
     video_name_without_trial = video_name_without_trial.split("_test_")[0]
+    video_name_without_trial = video_name_without_trial.split("_novel_")[0]
 
     # .. / video_skill / video_name with trial /
     path = f"{risk_estimation.path}/{folder}/{get_session()}/{video_name_without_trial}/{video_name}/"

@@ -17,6 +17,9 @@ class RiskEstimatorBase():
         self.feature_extractor = None
         self.train_epoch = 2000
 
+        self.WINDOW_SIZE = 3
+        self.prev = deque([False] * self.WINDOW_SIZE, maxlen=self.WINDOW_SIZE)
+
     def set_dataloaders_for_validation(self, list_of_dataloaders: list, names: list):
         self.validation_dataloaders = {}
         for dataloader, name in zip(list_of_dataloaders,names):
@@ -26,8 +29,6 @@ class RiskEstimatorBase():
     def model_path(self):
         return f"{risk_estimation.path}/saved_models/{get_session()}"
 
-    WINDOW_SIZE = 3
-    prev = deque([False] * WINDOW_SIZE, maxlen=WINDOW_SIZE)
     def risk_to_decision(self, r: float) -> int:
         """ Activation Logic
         Args:

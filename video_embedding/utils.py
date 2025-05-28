@@ -190,35 +190,32 @@ def visualize_labelled_video_frame_inline(image, risk_flag, safe_flag=0, novelty
     plt.show()
 
 
-def number_of_saved_trials(video: str):
-
-
+def number_of_saved(video: str, cat: str):
     n = 0
-    while os.path.isfile(f'{get_trajectory_path()}/trajectories/{get_session()}/{video}_trial_{n}.npz'):
+    while os.path.isfile(f'{get_trajectory_path()}/trajectories/{get_session()}/{video}_{cat}_{n}.npz'):
         n += 1
-    
     return n
 
-def all_trial_names(skills: str, include_repr: bool = True):
+def _all_names_type(skills: str, include_repr: bool = True, cat = 'novel'):
     if isinstance(skills, str): # skills is single skill
         skills = [skills]
 
     names = []
     for skill in skills:
-        
-        names.extend([f"{skill}_trial_{i}" for i in range(number_of_saved_trials(skill))])
+        names.extend([f"{skill}_{cat}_{i}" for i in range(number_of_saved(skill, cat))])
         if include_repr:
             names.append(skill)
     
     return names
 
-def number_of_saved_test_trials(video: str):
+def all_novel_names(skills: str, include_repr: bool = True):
+    return _all_names_type(skills, include_repr, cat='novel')
 
-    n = 0
-    while os.path.isfile(f'{get_trajectory_path()}/trajectories/{get_session()}/{video}_test_{n}.npz'):
-        n += 1
-    
-    return n
+def all_trial_names(skills: str, include_repr: bool = True):
+    return _all_names_type(skills, include_repr, cat='trial')
+
+def all_test_names(skills: str, include_repr: bool = False):
+    return _all_names_type(skills, include_repr, cat='test')
 
 def get_trajectory_path():
     return trajectory_data_path
@@ -236,18 +233,7 @@ def get_all_names(name_skill: str):
     return [file.name[:-4] for file in p.iterdir() if file.is_file() and file.name.startswith(name_skill)]
 
 
-def all_test_names(skills: str, include_repr: bool = False):
-    if isinstance(skills, str): # skills is single skill
-        skills = [skills]
 
-    names = []
-    for skill in skills:
-        
-        names.extend([f"{skill}_test_{i}" for i in range(number_of_saved_test_trials(skill))])
-        if include_repr:
-            names.append(skill)
-    
-    return names
 
 
 def load_latent_trajectory(name, latent_dim, path=None):
