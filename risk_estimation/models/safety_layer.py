@@ -24,7 +24,7 @@ def check_estimator(func):
     def wrapper(self, *args, **kwargs):
         if self.video_embedder is None or self.risk_estimator is None:
             print("Estimator is not set.")
-            return None
+            return None, -1
         return func(self, *args, **kwargs)
     return wrapper
 

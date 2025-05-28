@@ -115,8 +115,8 @@ roslaunch object_localization box_localization.launch template:=demo404
 ```shell
 source ~/ilesia_ws/devel/setup.bash
 roslaunch skills_manager home.launch # move robot to home position
-roslaunch skills_manager interactive_skill_risk_trainer.launch localize_box:=true name_skill:=peg_pick404 session:=manipulation_demo404_augment_12_session risk_policy:=ContinueRiskPolicy # or pick peg manually
-roslaunch skills_manager interactive_skill_risk_trainer.launch localize_box:=true name_skill:=peg_door404  session:=manipulation_demo404_augment_12_session risk_policy:=RecoveryRiskPolicy # test risk estimator with this command
+roslaunch skills_manager interactive_skill_risk_trainer.launch localize_box:=true name_skill:=peg_pick404 session:=AE3 risk_policy:=ContinueRiskPolicy # or pick peg manually
+roslaunch skills_manager interactive_skill_risk_trainer.launch localize_box:=true name_skill:=peg_door404  session:=AE3 risk_policy:=RecoveryRiskPolicy # test risk estimator with this command
 ```
 
 
