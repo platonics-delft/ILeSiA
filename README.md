@@ -3,7 +3,7 @@
 See the project website for the paper, materials, and more: http://imitrob.ciirc.cvut.cz/publications/ilesia/
 
 Teaching robots how to use camera images to detect labeled and novel risks.
-ILoSA is a framework that defines models regarding safety instruments used by robotic execution systems to evaluate safety metrics and potentionally provide ways to recover from risky situations.
+ILeSiA is a framework that defines models regarding safety instruments used by robotic execution systems to evaluate safety metrics and potentionally provide ways to recover from risky situations.
 
 The learning process consists of two steps:
 1. Kinesthetic demonstration - in which the human leads the robot through the desired motion,
