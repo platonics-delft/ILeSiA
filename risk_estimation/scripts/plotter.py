@@ -134,6 +134,7 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True, trai
     for n,frame_n in enumerate(frame_numbers):
         # Annotate a line connecting the bottom x-axis point to the image
         axs[1].axvline(x=frame_n, color='black', linestyle='--', zorder=12, linewidth=1.0, ymin=0.06, ymax=0.94)
+        axs[1].axvline(x=frame_n, color='black', linestyle='--', zorder=12, linewidth=1.0, ymin=0.06, ymax=0.94)
         
         if connection_line:
             xy = (frame_n, 1.06)  # Endpoint in data coordinates for the bottom plot
@@ -143,6 +144,19 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True, trai
             fig.add_artist(con)
 
     # Plot vertical lines based on condition
+    # for i in range(data.index[0], data.index[-1]):
+    #     if data['RiskTrue'][i] == 1 or data['SafeTrue'][i] == 1:
+    #         color = 'blue' if data['Correct'][i] == 1 else 'red'
+    #         ax.axvline(x=i, color=color, alpha=0.1, zorder=2)
+    
+    if series_enabled:
+        SLIDINGWINDOW = 5
+        for i in range(data.index[0], data.index[-1]):
+            if i < SLIDINGWINDOW: continue
+            
+            if (np.array(data['Risk'][i-5:i]) > 0.51).all():
+                ax.plot(np.clip(data['Risk'][i-5:i], 0, 1), color="red", linewidth=1.5, zorder=12)
+                # ax.axvline(x=i, color="red", ymin=(0.06/1.12), ymax=0.06+(data['Risk'][i]/1.12), zorder=8)
     # for i in range(data.index[0], data.index[-1]):
     #     if data['RiskTrue'][i] == 1 or data['SafeTrue'][i] == 1:
     #         color = 'blue' if data['Correct'][i] == 1 else 'red'
@@ -170,6 +184,9 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True, trai
     else:
         series_enabled_text = "_nodata"
     # Add a dashed horizontal line
+    ax.axhline(y=0.5, color='black', linestyle='--', linewidth=1, zorder=6)
+    ax.axhline(y=1.0, color='black', linestyle='-', linewidth=1, zorder=6)
+    ax.axhline(y=0.0, color='black', linestyle='-', linewidth=1, zorder=6)
     ax.axhline(y=0.5, color='black', linestyle='--', linewidth=1, zorder=6)
     ax.axhline(y=1.0, color='black', linestyle='-', linewidth=1, zorder=6)
     ax.axhline(y=0.0, color='black', linestyle='-', linewidth=1, zorder=6)
@@ -220,6 +237,7 @@ def plotter(filepath, half = "", connection_line=True, series_enabled=True, trai
 
     # Set the x-axis limits
     ax.set_xlim(left=data.index[0]-5, right=data.index[-1])
+    ax.set_ylim(bottom=-0.06, top=1.06)
     ax.set_ylim(bottom=-0.06, top=1.06)
 
     # Use tight_layout to adjust the layout
