@@ -9,6 +9,7 @@ from video_embedding.utils import get_session
 import risk_estimation
 import numpy as np
 from torch.utils.data import DataLoader, Subset
+from collections import deque 
 
 # We will use the simplest form of GP model, exact inference
 class GPModel(gpytorch.models.ExactGP):
@@ -206,15 +207,33 @@ class GPRiskEstimator(RiskEstimatorBase):
             
             if self.out_assessment == 'optimistic':
                 risk = mean
+                pred = self.risk_to_decision(risk)
             elif self.out_assessment == 'cautious':
                 risk = mean + std
+                pred = self.risk_to_decision(risk)
+            elif self.out_assessment == 'separate_thrs':
+                risk = mean + std
+                pred = self.custom_decision(mean, std)
             else: raise Exception()
 
-            pred = self.risk_to_decision(risk)
-        
         self.model.train()
         self.likelihood.train()
         return pred, risk, std
+
+    def custom_decision(self, mean: float, std: float, thr_std: float = 0.3) -> int:
+        """ Activation Logic """
+        logic_pred = (np.array(std) > thr_std) or (std < thr_std and mean > self.thr)
+
+        d_ = list(self.prev) + list(logic_pred)
+        ret = []
+        for i in range(self.WINDOW_SIZE+1, len(d_) + 1):
+            window = d_[i - self.WINDOW_SIZE:i]
+            ret.append(all(window))
+
+        self.prev = deque(d_[-self.WINDOW_SIZE:], maxlen=self.WINDOW_SIZE)
+    
+        return np.array(ret)
+
 
 class TwinGPRiskEstimator():
     APPROACH = "TwinGP"
