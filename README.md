@@ -150,3 +150,29 @@ Extract `demo_day_09_24_trajectories_manipulation_demo404_augment_12_session.zip
 Extract `demo_day_09_24_video_embedding_manipulation_demo404_augment_12_session.zip` trajectories to `src/video_safety_layer/video_embedding/saved_models/`
 Extract `demo_day_09_24_risk_models_manipulation_demo404_augment_12_session.zip` trajectories to `src/video_safety_layer/video_embedding/saved_models/`
 Uncut video: `00137.MTS`
+
+# Metadata
+
+Contributors: Petr Vanc, Giovanni Franzese, Jan Kristof Behrens, Cosimo Della Santina, Karla Stepanova, Jens Kober, Robert Babuska
+
+Licence: CC-BY
+
+DOI: 10.1109/LRA.2025.3601037
+
+Funding by European Union through Project Robotics and Advanced Industrial Production under Reg. CZ.02.01.01/00/22_008/0004590
+
+Date of creation: 28 May 2025 (final version)
+
+Citation: P. Vanc et al., "ILeSiA: Interactive Learning of Robot Situational Awareness From Camera Input," in IEEE Robotics and Automation Letters, vol. 10, no. 10, pp. 10490-10497, Oct. 2025, doi: 10.1109/LRA.2025.3601037.
+```
+@ARTICLE{11130915,
+  author={Vanc, Petr and Franzese, Giovanni and Behrens, Jan Kristof and Santina, Cosimo Della and Stepanova, Karla and Kober, Jens and Babuska, Robert},
+  journal={IEEE Robotics and Automation Letters}, 
+  title={ILeSiA: Interactive Learning of Robot Situational Awareness From Camera Input}, 
+  year={2025},
+  volume={10},
+  number={10},
+  pages={10490-10497},
+  keywords={Robots;Cameras;Robot vision systems;Uncertainty;Visualization;Videos;Trajectory;Training;Hidden Markov models;Autoencoders;Anomaly detection;collaborative robots;Gaussian processes;human in the loop;imitation learning},
+  doi={10.1109/LRA.2025.3601037}}
+```
