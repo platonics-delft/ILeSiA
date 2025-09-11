@@ -215,7 +215,7 @@ class VideoEmbedder():
         from sklearn.decomposition import PCA
 
 
-        tsne = TSNE(n_components=2, perplexity=perplexity, n_iter=1000, random_state=42)
+        tsne = TSNE(n_components=2, perplexity=perplexity, max_iter=1000, random_state=42)
         latent_2d = tsne.fit_transform(latent_traj)
 
         pca = PCA(n_components=2)

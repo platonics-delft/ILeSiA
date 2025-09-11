@@ -10,13 +10,13 @@ from risk_estimation.models.mlp_risk_estimator import MLPRiskEstimator, MLPRiskE
 from risk_estimation.models.gp_risk_estimator import GPRiskEstimator, TwinGPRiskEstimator
 from risk_estimation.models.dist_risk_estimator import *
 from risk_estimation.models.resnet_risk_estimator import ResNetRiskEstimator
-from video_embedding.utils import all_trial_names, all_test_names, visualize_labelled_video, visualize_labelled_video_frame, get_session
+from video_embedding.utils import all_trial_names, all_test_names, visualize_labelled_video, visualize_labelled_video_frame, get_session, get_all_names
 from video_embedding.models.video_embedder import VideoEmbedder
-
+from video_embedding.models.video_embedding_dataset import load_dataloader
 from risk_estimation.models.risk_estimator import *
 from video_embedding.models.nerual_networks.autoencoder import *
 
-import rospy
+import rclpy
 import time
 import threading
 
@@ -39,7 +39,7 @@ class SafetyLayer:
         frame_dropping_policy = OnlyLabelledFramesDroppingPolicy,
         model_not_found_is_ok: bool = False,
         out_assessment: str = "cautious",
-        enable_train: bool = False,
+        enable_train: bool = True,
         enable_risk_estimator: bool = True,
     ):
         """_summary_
@@ -49,12 +49,13 @@ class SafetyLayer:
             ingeneralshouldbe (_type_, optional): _description_. Defaults to 16.
             feature_extractor (_type_, optional): _description_.
             frame_dropping_policy (FrameDropper, optional): _description_. Defaults to OnlyLabelledFramesDroppingPolicy.
-        """        
+        """      
+        self.skill_name = skill_name  
         self.frame_dropping_policy = frame_dropping_policy
         self.feature_extractor = feature_extractor
         self.out_assessment = out_assessment
         
-        self.video_embedder = VideoEmbedder(name=skill_name, latent_dim=latent_dim, nn_model=Autoencoder2)
+        self.video_embedder = VideoEmbedder(name=skill_name, latent_dim=latent_dim, nn_model=Autoencoder3)
         if not enable_risk_estimator:
             self.video_embedder = None
             return
@@ -69,7 +70,8 @@ class SafetyLayer:
             else:
                 self.video_embedder.load_model()
 
-        # self.update_video_embedding(epoch=50)
+        # self.update_video_embedding()
+        
         
         if enable_train:
             self.update()
@@ -83,7 +85,6 @@ class SafetyLayer:
             )
             self.risk_estimator.load_model()
 
-        self.skill_name = skill_name
         self.observations = None
         self.risk = 0.0
         self.workersem = threading.Semaphore()
@@ -94,7 +95,7 @@ class SafetyLayer:
     def sample(self, o):
         return self.risk_estimator.sample(o)
 
-    def update_video_embedding(self, epoch: int):
+    def update_video_embedding(self):
         """Should be function with no parameters, as specific as possible.
         video_embedder model is loaded.
 
@@ -102,52 +103,40 @@ class SafetyLayer:
             epoch (int): _description_. 
         """ 
 
-        print(self.video_embedder.model_train_record)
-        
-        # Get train_names - model was trained these 
-        train_names = []       
-        
+        # (optional) model was trained these videos 
+        print(self.video_embedder.model_train_record)        
+        train_names = []               
         for train_inst in self.video_embedder.model_train_record:
             train_names.extend(train_inst['train_names'])
         train_names = list(set(train_names))
         print("Video embedder was trained on", train_names)
+        # =========================================
 
         # Get all trajectory demonstrations found for this skill
-        all_names = all_trial_names(self.video_embedder.name)
-        print("Video embedder sees videos: ", all_names)
-
-        # Get all trajectory demonstrations that haven't been trained on
-        update_names = []
-        for name in all_names:
-            if name not in train_names:
-                update_names.append(name)
-
-        print("Video embedder will be updated on videos: ", update_names)
-
-        self.video_embedder.frame_dropping = True
-        self.video_embedder.name = all_names[0]
-        self.video_embedder.load(all_names)
-        new_lr = 0.3 # speed up the learning
-        for param_group in self.video_embedder.optimizer.param_groups:
-            param_group['lr'] = new_lr
-        self.video_embedder.create_video(epoch=epoch)
-        
-        # self.video_embedder.save_model()
-        # self.video_embedder.save_latent_trajectory()
+        train_videos = get_all_names(self.skill_name)
+        print("Video embedder sees videos: ", train_videos)
+        dataloader = load_dataloader(train_videos, batch_size=64)
+        self.video_embedder.train(dataloader, train_videos, num_epochs=50)
+        self.video_embedder.save_model()
 
     def update(self):
         """Update model on all found trial for specific skill_name
         """
-        dataloader = D.load_dataset(all_trial_names(self.skill_name) + all_test_names(self.skill_name), 
-            self.video_embedder, self.video_embedder.batch_size, self.framedrop_policy, self.features)
+        dataloader = D.load_dataloader(all_trial_names(self.skill_name) + all_test_names(self.skill_name), 
+            self.video_embedder, 40, self.frame_dropping_policy, self.feature_extractor)
         
+
         self.risk_estimator = get_risk_estimator(
-            approach="deploy",
+            approach="GP",
             skill_name=self.video_embedder.name,
             xdim=self.feature_extractor.xdim(self.video_embedder.latent_dim),
             video_embedder=self.video_embedder,
             out_assessment=self.out_assessment,
+            train_epoch = 10,
         )
+        self.risk_estimator.set_dataloaders_for_validation([
+                dataloader,
+            ], names=["test"])
         self.risk_estimator.training_loop(dataloader)
 
     @check_estimator
@@ -158,7 +147,7 @@ class SafetyLayer:
         return self.risk, self.risk_vall
 
     def risk_estimator_thread(self):
-        while not rospy.is_shutdown():
+        while rclpy.ok():
             self.workersem.acquire()
             observations = deepcopy(self.observations)
             self.workersem.release()

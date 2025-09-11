@@ -130,7 +130,8 @@ class Autoencoder2(AutoencoderBase):
 
 
 class Autoencoder3(AutoencoderBase):
-    def __init__(self, latent_dim: int = 12):
+    def __init__(self, latent_dim: int = 12, run_batched=RUN_BATCHED):
+        self.run_batched = run_batched
         super(Autoencoder3, self).__init__()  # Fixed class name
 
         # Encoder with dropout

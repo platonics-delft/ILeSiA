@@ -1,9 +1,0 @@
-<launch>
-    <rosparam command="load" file="$(find skills_manager)/config/settings.yaml" />
-    <arg name="name_skill" default="skill" />
-    <arg name="session" default="" />
-    <node name="recording_node" pkg="skills_manager" type="record_skill.py" output="screen">
-        <param name="name_skill" value="$(arg name_skill)" /> 
-        <param name="session" value="$(arg session)" /> 
-    </node>
-</launch>

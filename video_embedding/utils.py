@@ -224,8 +224,8 @@ ros_pack = rospkg.RosPack()
 try:
     trajectory_data_path = ros_pack.get_path('trajectory_data')
 except:
-    import trajectories
-    trajectory_data_path = trajectories.package_path
+    import trajectory_data
+    trajectory_data_path = trajectory_data.package_path
 
 
 def get_all_names(name_skill: str):

@@ -97,8 +97,8 @@ class GPRiskEstimator(RiskEstimatorBase):
     def create_model(self, X, Y):        
 
         self.likelihood = gpytorch.likelihoods.GaussianLikelihood()
-        print("Has  analytical likelihood:")
-        print(self.likelihood.has_analytic_marginal)
+        # print("Has  analytical likelihood:")
+        # print(self.likelihood.has_analytic_marginal)
 
         if self.arch == '':
             self.model = GPModel(X, Y, self.likelihood, ard=self.ard)

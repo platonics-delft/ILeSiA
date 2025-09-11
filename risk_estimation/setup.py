@@ -1,25 +1,27 @@
-from setuptools import setup, find_packages
+from setuptools import setup
+from glob import glob
+import os 
+
+package_name = 'risk_estimation'
 
 setup(
-    name='risk_estimation',
-    version='3.8.0',
-    description='',
-    url='',
-    author='',
-    author_email='',
-    license='BSD 2-clause',
-    packages=find_packages(),
-    #py_modules=['risk_estimation'],
-    install_requires=['numpy',
-                      ],
-    entry_points='''
-    ''',
-
-    classifiers=[
-        'Development Status :: 1 - Planning',
-        'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: BSD License',
-        'Operating System :: POSIX :: Linux',
-        'Programming Language :: Python :: 3.8',
+    name=package_name,
+    version='3.11.0',
+    packages=[package_name],
+    install_requires=['setuptools'],
+    data_files=[
+        ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name + '/launch', glob('launch/*.py')),
     ],
+    zip_safe=True,
+    maintainer='Petr Vanc',
+    maintainer_email='petr.vanc@cvut.cz',
+    author='Petr Vanc',
+    author_email='petr.vanc@cvut.cz',
+    description='',
+    license='MIT',
+    tests_require=['pytest'],
+    entry_points={
+        'console_scripts': [],
+    },
 )
