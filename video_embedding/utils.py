@@ -148,6 +148,25 @@ def visualize_labelled_video_frame(image, risk_flag, safe_flag=0, novelty_flag=0
     return False
 
 
+def visualize_video_frame_with_text(image, text: str = "", color: tuple[int, int, int] = (0,0,255), press_for_next_frame: bool = False):
+    image = image.squeeze().astype(np.uint8)
+    image = cv2.resize(image, (64, 64), interpolation=cv2.INTER_AREA)
+
+    cv2.putText(image, text, (0, 12), cv2.FONT_HERSHEY_SIMPLEX,
+        0.5, color, 1, 2)
+    
+    cv2.namedWindow("Image", cv2.WINDOW_NORMAL)
+    # cv2.moveWindow("Image",1200,30)
+    cv2.resizeWindow("Image", 640, 640)
+    zoomed_image = cv2.resize(image, (640, 640), interpolation=cv2.INTER_NEAREST)
+    cv2.imshow("Image", zoomed_image)
+
+    if press_for_next_frame:
+        cv2.waitKey(0)  # Wait for a key press to close the window
+    if cv2.waitKey(25) & 0xFF == 27:  # Press 'Esc' to exit
+        return True
+    return False
+
 def visualize_labelled_video_frame_inline(image, risk_flag, safe_flag=0, novelty_flag=0, recovery_phase=-1.0,press_for_next_frame=False, printer=False):
     if risk_flag:
         risk_label = 'R'
